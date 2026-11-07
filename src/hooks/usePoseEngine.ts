@@ -159,8 +159,10 @@ export function usePoseEngine({
     let lastRepTime = performance.now();
 
     const loop = (currentTime: number) => {
-      const deltaMs = currentTime - lastFrameTime;
+      const rawDeltaMs = currentTime - lastFrameTime;
       lastFrameTime = currentTime;
+      // Cap deltaMs to 40ms to prevent large simulation jumps during capture or frame spikes
+      const deltaMs = Math.min(rawDeltaMs, 40);
 
       // Update FPS counter every 500ms
       frameCount++;
@@ -183,8 +185,8 @@ export function usePoseEngine({
         let skeleton: Skeleton | null = null;
 
         if (inputSource === 'synthetic') {
-          // Advance synthetic movement waveform: 0 -> 1 -> 0
-          const cycleRate = 0.0006 * playbackSpeed * deltaMs;
+          // Advance synthetic movement waveform smoothly: ~2.8s per realistic repetition cycle
+          const cycleRate = 0.00038 * playbackSpeed * deltaMs;
           syntheticProgress = (syntheticProgress + cycleRate) % 1.0;
 
           skeleton = generateKinematicSkeleton(

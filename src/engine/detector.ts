@@ -73,22 +73,22 @@ export function generateKinematicSkeleton(
     }
 
     case 'pull_ups': {
-      // Pull-up: body rises, elbows flex from >160 to ~45 degrees, chin rises above bar
-      const lift = t * 0.18; // body rises by 0.18 screen units
+      // Pull-up: body rises, elbows flex from deadhang (~172°) to peak chin-over-bar flexion (~48°)
+      const lift = t * 0.20; // body rises by 0.20 screen units
       const kipping = faultMode === 'kipping' ? Math.sin(progress * 2 * Math.PI) * 0.08 : 0;
 
-      // Hands fixed on bar at y = 0.12
-      landmarks[LandmarkIndex.LEFT_WRIST] = { x: 0.42, y: 0.12, z: 0, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_WRIST] = { x: 0.58, y: 0.12, z: 0, visibility: 0.99 };
+      // Hands fixed on bar at y = 0.10
+      landmarks[LandmarkIndex.LEFT_WRIST] = { x: 0.43, y: 0.10, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_WRIST] = { x: 0.57, y: 0.10, z: 0, visibility: 0.99 };
 
-      // Elbows flare and bend
-      landmarks[LandmarkIndex.LEFT_ELBOW] = { x: 0.38 - t * 0.04, y: 0.24 - lift * 0.5, z: 0.03, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_ELBOW] = { x: 0.62 + t * 0.04, y: 0.24 - lift * 0.5, z: 0.03, visibility: 0.99 };
+      // Elbows flare and flex
+      landmarks[LandmarkIndex.LEFT_ELBOW] = { x: 0.43 - t * 0.065, y: 0.22 - lift * 0.20, z: 0.03, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_ELBOW] = { x: 0.57 + t * 0.065, y: 0.22 - lift * 0.20, z: 0.03, visibility: 0.99 };
 
-      landmarks[LandmarkIndex.LEFT_SHOULDER] = { x: 0.45, y: 0.32 - lift, z: 0, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_SHOULDER] = { x: 0.55, y: 0.32 - lift, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_SHOULDER] = { x: 0.45, y: 0.34 - lift, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_SHOULDER] = { x: 0.55, y: 0.34 - lift, z: 0, visibility: 0.99 };
 
-      landmarks[LandmarkIndex.NOSE] = { x: 0.5, y: 0.25 - lift, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.NOSE] = { x: 0.5, y: 0.26 - lift, z: 0, visibility: 0.99 };
 
       landmarks[LandmarkIndex.LEFT_HIP] = { x: 0.46, y: 0.56 - lift, z: 0, visibility: 0.99 };
       landmarks[LandmarkIndex.RIGHT_HIP] = { x: 0.54, y: 0.56 - lift, z: 0, visibility: 0.99 };
