@@ -111,7 +111,7 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
 
       {/* Simulator Controls (Active when in Synthetic mode) */}
       {inputSource === 'synthetic' && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Speed Selector */}
           <div className="flex items-center gap-1 bg-[#141b2d] px-2 py-1 rounded-lg border border-slate-800 text-xs font-mono">
             <Play className="w-3 h-3 text-slate-400" />
@@ -134,7 +134,7 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           <select
             value={syntheticFaultMode}
             onChange={e => onChangeFaultMode(e.target.value as 'none' | 'valgus' | 'rounding' | 'kipping' | 'sag')}
-            className="bg-[#141b2d] border border-slate-700/60 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+            className="w-full sm:w-auto max-w-[260px] bg-[#141b2d] border border-slate-700/60 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
           >
             <option value="none">Form: Clean Technique</option>
             <option value="valgus">Inject: Knee Valgus Collapse</option>

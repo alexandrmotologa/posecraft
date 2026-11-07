@@ -29,7 +29,7 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
   return (
     <div className="bg-[#0e131f] border border-slate-800 rounded-xl p-4 shadow-xl">
       {/* Header & Suite Tabs */}
-      <div className="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-2">
           <Activity className="w-5 h-5 text-cyan-400" />
           <h2 className="text-sm font-semibold tracking-wide uppercase text-slate-300">
@@ -41,7 +41,7 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
         </div>
 
         {/* Search */}
-        <div className="relative w-48">
+        <div className="relative w-full sm:w-56">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
           <input
             type="text"
@@ -54,7 +54,7 @@ export const ExerciseSelector: React.FC<ExerciseSelectorProps> = ({
       </div>
 
       {/* Suite Tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-1.5 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 mb-4">
         {EXERCISE_SUITES.map(suite => {
           const isActive = suite.id === activeSuiteId;
           return (

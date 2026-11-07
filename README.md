@@ -1,8 +1,28 @@
-# PoseCraft
+<p align="center">
+  <img src="docs/images/logo.png?raw=true" alt="PoseCraft Logo" width="130" style="border-radius: 24px;" />
+</p>
 
-Local biomechanical movement analysis and repetition tracking engine running in modern web browsers via WebGPU, WebAssembly, and React 19.
+<h1 align="center">PoseCraft</h1>
 
-PoseCraft runs 100% on the client device. Video streams and camera feeds remain strictly local, with zero frames transmitted over the network.
+<p align="center">
+  <strong>Local Biomechanical Movement Lab & Repetition Engine</strong><br />
+  Runs 100% on-device via WebGPU, WebAssembly, MediaPipe Pose (33 3D Joints), and React 19.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Runtime-WebGPU%20%2F%20Wasm-00f5ff?style=flat-square" alt="WebGPU Runtime" />
+  <img src="https://img.shields.io/badge/Pose%20Model-MediaPipe%2033%20Joints-0284c7?style=flat-square" alt="MediaPipe" />
+  <img src="https://img.shields.io/badge/Frontend-React%2019%20%2B%20TypeScript-3b82f6?style=flat-square" alt="React 19" />
+  <img src="https://img.shields.io/badge/Privacy-Zero%20Cloud%20Uploads-10b981?style=flat-square" alt="Zero Cloud Uploads" />
+  <img src="https://img.shields.io/badge/Tests-55%20Passing-emerald?style=flat-square" alt="Tests 55 Passing" />
+  <img src="https://img.shields.io/badge/License-MIT-slate?style=flat-square" alt="License MIT" />
+</p>
+
+<p align="center">
+  <img src="docs/images/posecraft_demo.gif?raw=true" alt="PoseCraft Biomechanical Movement Engine Live Demonstration" width="100%" style="border-radius: 14px; border: 1px solid #1e293b;" />
+</p>
+
+PoseCraft is a client-side biomechanical movement analysis laboratory and repetition tracking engine. It operates directly inside modern web browsers with zero external network transmission of camera feeds or video streams.
 
 ## Key Capabilities
 
@@ -29,6 +49,17 @@ PoseCraft runs 100% on the client device. Video streams and camera feeds remain 
 | **Conditioning & Functional** | Kettlebell Swings, Burpees, Jump Rope, Boxing Shadow & Guard | Hip hinge versus squat classifier, cadence (RPM), ground contact time, guard check |
 | **Athletic Performance** | Countermovement Vertical Jump, Running Gait Cadence, Standing Broad Jump | Airborne flight time height formula, takeoff velocity, stride impact angle |
 | **Kinetotherapy & Rehab** | FMS Overhead Squat, Shoulder Mobility (Apley), Desk Posture Sentinel, 30s Sit-to-Stand | Functional movement screen score, craniovertebral angle (tech neck), fall risk index |
+
+## Studio Interface & Telemetry
+
+### Real-Time Biomechanical Movement Studio
+![PoseCraft Desktop Dashboard](docs/images/posecraft_desktop_dashboard.png?raw=true)
+
+### Clinical Athlete Report & Mobile Responsive Design
+<p align="center">
+  <img src="docs/images/posecraft_report_modal.png?raw=true" alt="Athlete Assessment Report" width="62%" style="border-radius: 12px; vertical-align: top; margin-right: 2%;" />
+  <img src="docs/images/posecraft_mobile.png?raw=true" alt="PoseCraft Mobile Responsive Interface" width="34%" style="border-radius: 12px; vertical-align: top;" />
+</p>
 
 ## Architecture Overview
 

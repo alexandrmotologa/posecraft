@@ -40,7 +40,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {/* 1. Repetition Counter */}
       <div className="bg-[#0e131f] border border-slate-800/80 rounded-xl p-3.5 shadow-lg relative overflow-hidden">
         <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
