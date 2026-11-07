@@ -41,34 +41,36 @@ export function generateKinematicSkeleton(
     case 'bulgarian_squat':
     case 'fms_overhead_squat':
     case 'sit_to_stand': {
-      // Squatting: hips descend down and translate back, knees track forward into deep below-parallel squat
-      const hipDepth = t * 0.22; // descends by 0.22 screen units
-      const kneeY = 0.68 + t * 0.04;
+      // Squatting: hips descend down into deep below-parallel squat (<75°)
+      // In clean form, knees track naturally outward over toes (maintaining wide lateral base).
+      // When faultMode is 'valgus', knees collapse medially inward towards each other.
+      const hipDepth = t * 0.19; // descends smoothly by 0.19 screen units
+      const kneeY = 0.68;
       const hipY = 0.50 + hipDepth;
-      const hipX = 0.50 - t * 0.04; // natural hip back shift
 
-      const valgusOffset = faultMode === 'valgus' ? t * 0.06 : 0; // inward medial collapse
+      const valgusOffset = faultMode === 'valgus' ? t * 0.055 : 0; // inward medial collapse
 
-      landmarks[LandmarkIndex.LEFT_SHOULDER] = { x: 0.45 - t * 0.02, y: 0.30 + hipDepth, z: 0, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_SHOULDER] = { x: 0.55 - t * 0.02, y: 0.30 + hipDepth, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_SHOULDER] = { x: 0.44, y: 0.30 + hipDepth, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_SHOULDER] = { x: 0.56, y: 0.30 + hipDepth, z: 0, visibility: 0.99 };
 
-      landmarks[LandmarkIndex.LEFT_ELBOW] = { x: 0.44, y: 0.38 + hipDepth, z: 0.05, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_ELBOW] = { x: 0.56, y: 0.38 + hipDepth, z: 0.05, visibility: 0.99 };
-      landmarks[LandmarkIndex.LEFT_WRIST] = { x: 0.46, y: 0.29 + hipDepth, z: 0.02, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_WRIST] = { x: 0.54, y: 0.29 + hipDepth, z: 0.02, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_ELBOW] = { x: 0.42, y: 0.38 + hipDepth, z: 0.05, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_ELBOW] = { x: 0.58, y: 0.38 + hipDepth, z: 0.05, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_WRIST] = { x: 0.45, y: 0.29 + hipDepth, z: 0.02, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_WRIST] = { x: 0.55, y: 0.29 + hipDepth, z: 0.02, visibility: 0.99 };
 
-      landmarks[LandmarkIndex.LEFT_HIP] = { x: hipX - 0.06, y: hipY, z: 0, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_HIP] = { x: hipX + 0.06, y: hipY, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_HIP] = { x: 0.44, y: hipY, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_HIP] = { x: 0.56, y: hipY, z: 0, visibility: 0.99 };
 
-      landmarks[LandmarkIndex.LEFT_KNEE] = { x: 0.43 + t * 0.070 + valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_KNEE] = { x: 0.57 - t * 0.070 - valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
+      // Knees: track outward over toes in clean form; collapse inward when valgus fault is active
+      landmarks[LandmarkIndex.LEFT_KNEE] = { x: 0.41 - t * 0.015 + valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_KNEE] = { x: 0.59 + t * 0.015 - valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
 
-      landmarks[LandmarkIndex.LEFT_ANKLE] = { x: 0.44, y: 0.88, z: 0, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_ANKLE] = { x: 0.56, y: 0.88, z: 0, visibility: 0.99 };
-      landmarks[LandmarkIndex.LEFT_HEEL] = { x: 0.43, y: 0.90, z: -0.02, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_HEEL] = { x: 0.57, y: 0.90, z: -0.02, visibility: 0.99 };
-      landmarks[LandmarkIndex.LEFT_FOOT_INDEX] = { x: 0.43, y: 0.91, z: 0.05, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_FOOT_INDEX] = { x: 0.57, y: 0.91, z: 0.05, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_ANKLE] = { x: 0.42, y: 0.88, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_ANKLE] = { x: 0.58, y: 0.88, z: 0, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_HEEL] = { x: 0.41, y: 0.90, z: -0.02, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_HEEL] = { x: 0.59, y: 0.90, z: -0.02, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_FOOT_INDEX] = { x: 0.41, y: 0.91, z: 0.05, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_FOOT_INDEX] = { x: 0.59, y: 0.91, z: 0.05, visibility: 0.99 };
       break;
     }
 
