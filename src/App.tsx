@@ -10,11 +10,16 @@ import { MetricsDashboard } from './components/telemetry/MetricsDashboard';
 import { SafetyAlertBanner } from './components/telemetry/SafetyAlertBanner';
 import { RepTrackerTable } from './components/telemetry/RepTrackerTable';
 import { SessionReportModal } from './components/export/SessionReportModal';
-import { Activity, ShieldCheck, Cpu } from 'lucide-react';
+import { SessionHistoryModal } from './components/export/SessionHistoryModal';
+import { KinematicChart } from './components/telemetry/KinematicChart';
+import { TempoPacer } from './components/studio/TempoPacer';
+import { VideoScrubber } from './components/studio/VideoScrubber';
+import { Activity, ShieldCheck, Cpu, Compass } from 'lucide-react';
 
 export const App: React.FC = () => {
   const store = useWorkoutStore();
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // Active exercise rule instance
   const currentRule = useMemo(
@@ -29,6 +34,9 @@ export const App: React.FC = () => {
     fps,
     cameraActive,
     modelLoading,
+    isProtractorActive,
+    toggleProtractor,
+    clearProtractor,
     resetEngine,
   } = usePoseEngine({
     exerciseId: store.selectedExerciseId,
@@ -113,21 +121,29 @@ export const App: React.FC = () => {
           onChangeInputSource={store.setInputSource}
           isMuted={store.isMuted}
           onToggleMute={store.toggleMute}
+          isVoiceCoachEnabled={store.isVoiceCoachEnabled}
+          onToggleVoiceCoach={store.toggleVoiceCoach}
           playbackSpeed={store.playbackSpeed}
           onChangeSpeed={store.setPlaybackSpeed}
           syntheticFaultMode={store.syntheticFaultMode}
           onChangeFaultMode={store.setSyntheticFaultMode}
           onReset={handleResetWorkout}
           onOpenReport={() => setIsReportOpen(true)}
+          onOpenHistory={() => setIsHistoryOpen(true)}
+          onSaveSet={() => store.saveCurrentSession(currentRule.name)}
           onUploadFile={handleUploadFile}
+          hasRepsToSave={store.repHistory.length > 0}
         />
+
+        {/* Audio Metronome & Tempo Pacer */}
+        <TempoPacer />
 
         {/* Safety Alert Banner */}
         <SafetyAlertBanner alerts={store.activeAlerts} />
 
         {/* Two-Column Studio Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Column: Canvas Video HUD */}
+          {/* Left Column: Canvas Video HUD, Kinematic Chart, & History Table */}
           <div className="lg:col-span-8 space-y-4">
             <VideoCanvas
               videoRef={videoRef}
@@ -139,6 +155,51 @@ export const App: React.FC = () => {
               cameraActive={cameraActive}
               modelLoading={modelLoading}
               videoUrl={store.videoUrl}
+            />
+
+            {/* Video Scrubber & Frame Stepper (Upload Mode) */}
+            {store.inputSource === 'upload' ? (
+              <VideoScrubber
+                videoElement={videoRef.current}
+                isProtractorActive={isProtractorActive}
+                onToggleProtractor={toggleProtractor}
+                onClearProtractor={clearProtractor}
+              />
+            ) : (
+              <div className="bg-[#0e131f] border border-slate-800 rounded-xl p-2.5 px-4 flex items-center justify-between text-xs font-medium">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Compass className="w-4 h-4 text-cyan-400" />
+                  <span>Manual Angle Protractor (Click 3 points on canvas to measure joint angles)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleProtractor}
+                    className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all ${
+                      isProtractorActive
+                        ? 'bg-rose-950/60 border-rose-500 text-rose-300 ring-1 ring-rose-500/40'
+                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {isProtractorActive ? 'Protractor Active' : 'Activate Protractor'}
+                  </button>
+                  {isProtractorActive && (
+                    <button
+                      onClick={clearProtractor}
+                      className="px-2 py-1 text-[11px] rounded bg-slate-800 text-slate-400 hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Real-time Kinematic Velocity & Displacement Curve */}
+            <KinematicChart
+              currentValue={store.metrics?.primaryMetric || 0}
+              timestampMs={Date.now()}
+              metricLabel={currentRule.primaryMetricLabel}
+              metricUnit={currentRule.primaryMetricUnit}
             />
 
             {/* Repetition History Table */}
@@ -191,6 +252,14 @@ export const App: React.FC = () => {
         onClose={() => setIsReportOpen(false)}
         summary={currentRule.getSummary()}
         repHistory={store.repHistory}
+      />
+
+      {/* Saved Workout Sessions & Telemetry Export Modal */}
+      <SessionHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        sessions={store.savedSessions}
+        onClearHistory={store.clearSessionHistory}
       />
     </div>
   );

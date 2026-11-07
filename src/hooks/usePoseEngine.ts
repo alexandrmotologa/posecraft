@@ -13,7 +13,9 @@ import { generateKinematicSkeleton, MediaPipePoseDetector } from '../engine/dete
 import { renderSkeletonHUD } from '../components/canvas/SkeletonPainter';
 import { renderAngleDial } from '../components/canvas/AngleDial';
 import { PathTracer } from '../components/canvas/PathTracer';
+import { CustomProtractor } from '../components/canvas/CustomProtractor';
 import { audioEngine } from '../engine/audio';
+import { voiceCoach } from '../engine/voice_coach';
 
 export interface UsePoseEngineProps {
   exerciseId: string;
@@ -43,10 +45,12 @@ export function usePoseEngine({
   const kalmanRef = useRef<LandmarkKalmanFilter>(new LandmarkKalmanFilter());
   const detectorRef = useRef<MediaPipePoseDetector>(new MediaPipePoseDetector());
   const pathTracerRef = useRef<PathTracer>(new PathTracer(80));
+  const protractorRef = useRef<CustomProtractor>(new CustomProtractor());
 
   const [fps, setFps] = useState<number>(60);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [modelLoading, setModelLoading] = useState<boolean>(false);
+  const [isProtractorActive, setIsProtractorActive] = useState<boolean>(false);
 
   // Switch exercise rule on ID change
   useEffect(() => {
@@ -54,6 +58,35 @@ export function usePoseEngine({
     pathTracerRef.current.clear();
     kalmanRef.current.reset();
   }, [exerciseId]);
+
+  // Handle canvas click for interactive protractor
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleClick = (e: MouseEvent) => {
+      if (!protractorRef.current.isActive) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      protractorRef.current.addPoint({ x, y });
+    };
+
+    canvas.addEventListener('click', handleClick);
+    return () => canvas.removeEventListener('click', handleClick);
+  }, []);
+
+  const toggleProtractor = useCallback(() => {
+    setIsProtractorActive(prev => {
+      const next = !prev;
+      protractorRef.current.isActive = next;
+      return next;
+    });
+  }, []);
+
+  const clearProtractor = useCallback(() => {
+    protractorRef.current.clear();
+  }, []);
 
   // Handle webcam stream initialization
   useEffect(() => {
@@ -133,7 +166,7 @@ export function usePoseEngine({
 
         if (inputSource === 'synthetic') {
           // Advance synthetic movement waveform: 0 -> 1 -> 0
-          const cycleRate = (0.0006 * playbackSpeed * deltaMs);
+          const cycleRate = 0.0006 * playbackSpeed * deltaMs;
           syntheticProgress = (syntheticProgress + cycleRate) % 1.0;
 
           skeleton = generateKinematicSkeleton(
@@ -186,21 +219,30 @@ export function usePoseEngine({
               tempoString: '1.2s / 0.9s',
             });
             audioEngine.playRepDing();
+            voiceCoach.speakRep(metrics.repCount);
           }
 
-          // Trigger audio for new safety danger alert
-          if (metrics.activeAlerts.some(a => a.level === 'danger')) {
-            audioEngine.playWarningAlert();
+          // Trigger audio and voice coaching for safety alerts
+          if (metrics.activeAlerts.length > 0) {
+            const dangerAlert = metrics.activeAlerts.find(a => a.level === 'danger') || metrics.activeAlerts[0];
+            if (dangerAlert.level === 'danger') {
+              audioEngine.playWarningAlert();
+            }
+            voiceCoach.speakAlert(dangerAlert.id);
           }
 
-          // Draw skeleton HUD
-          const safetyLevel = metrics.activeAlerts.some(a => a.level === 'danger')
-            ? 'danger'
-            : metrics.activeAlerts.length > 0
-            ? 'warning'
-            : 'safe';
+          // Compute target depth guideline if applicable
+          let targetDepthY: number | undefined;
+          if (exerciseId === 'back_squat' || exerciseId === 'bulgarian_squat') {
+            const knee = filteredLandmarks[LandmarkIndex.LEFT_KNEE];
+            if (knee) targetDepthY = knee.y + 0.03; // hip crease breaks knee line
+          } else if (exerciseId === 'pull_ups') {
+            const wrist = filteredLandmarks[LandmarkIndex.LEFT_WRIST];
+            if (wrist) targetDepthY = wrist.y; // chin must pass wrist line
+          }
 
-          renderSkeletonHUD(ctx, filteredLandmarks, width, height, safetyLevel);
+          // Render skeleton HUD with isolated bone segment stress coloring
+          renderSkeletonHUD(ctx, filteredLandmarks, width, height, metrics.activeAlerts, targetDepthY);
 
           // Draw joint angle dials for relevant exercise joints
           if (metrics.angles.kneeAngle !== undefined && filteredLandmarks[LandmarkIndex.LEFT_KNEE]) {
@@ -235,11 +277,27 @@ export function usePoseEngine({
             );
           }
 
-          // Update and render Bar path / wrist tracer
-          const wrist = filteredLandmarks[LandmarkIndex.LEFT_WRIST];
-          if (wrist) {
-            pathTracerRef.current.addPoint({ x: wrist.x, y: wrist.y }, currentTime);
-            pathTracerRef.current.render(ctx, width, height);
+          // Update and render Bar path / wrist tracer with vertical corridor
+          const isBarbellExercise = [
+            'back_squat',
+            'deadlift',
+            'bench_press',
+            'overhead_press',
+            'barbell_row',
+          ].includes(exerciseId);
+
+          const trackPoint = isBarbellExercise
+            ? filteredLandmarks[LandmarkIndex.LEFT_WRIST]
+            : filteredLandmarks[LandmarkIndex.LEFT_WRIST];
+
+          if (trackPoint) {
+            pathTracerRef.current.addPoint({ x: trackPoint.x, y: trackPoint.y }, currentTime);
+            pathTracerRef.current.render(ctx, width, height, '#ec4899', isBarbellExercise);
+          }
+
+          // Render interactive protractor if active
+          if (protractorRef.current.isActive) {
+            protractorRef.current.render(ctx, width, height);
           }
         }
       }
@@ -267,6 +325,7 @@ export function usePoseEngine({
     ruleRef.current.reset();
     kalmanRef.current.reset();
     pathTracerRef.current.clear();
+    protractorRef.current.clear();
   }, []);
 
   return {
@@ -275,6 +334,9 @@ export function usePoseEngine({
     fps,
     cameraActive,
     modelLoading,
+    isProtractorActive,
+    toggleProtractor,
+    clearProtractor,
     resetEngine,
   };
 }

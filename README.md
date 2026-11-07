@@ -10,10 +10,14 @@ PoseCraft runs 100% on the client device. Video streams and camera feeds remain 
 - **Anatomical Scale Invariance**: Normalizes all linear metrics against the user's torso length and limb baselines. Measurements stay accurate across different camera distances.
 - **Dual-Threshold Repetition State Machine**: Uses hysteresis to prevent double counting from muscle tremor or pause points.
 - **Adaptive Kalman Jitter Filtering**: Smooths 33 anatomical landmark coordinates in real time while preserving high-speed concentric movement spikes.
-- **Real-Time Canvas HUD at 60 FPS**: Renders joint angle dials, color-coded bone stress lines, bar path tracers, and form violation banners.
-- **Synthesized Audio Feedback**: Uses the Web Audio API to deliver rep completion chimes, safety warning pulses, and metronome pacing without external audio files.
-- **Offline Video Analysis & Scrubbing**: Supports camera capture, video file upload (.mp4, .webm, .mov) with frame-by-frame scrubbing, and built-in synthetic exercise simulations.
-- **Report & Video Export**: WebCodecs-based MP4 recorder with burned-in telemetry HUD and printable biomechanical athlete summaries.
+- **Real-Time Canvas HUD at 60 FPS**: Renders joint angle dials, color-coded bone stress lines, bar path tracers with vertical corridors, and form violation banners.
+- **Synthesized Voice & Audio Coach**: Delivers spoken coaching cues ("Knees out", "Chest up", "Squeeze glutes"), rep count announcements, and Web Audio chimes with zero cloud dependencies.
+- **Audio Metronome & Tempo Pacer**: Web Audio synthesizer pacing repetitions across eccentric, isometric pause, and concentric phases (e.g. 3-1-1-0 or 2-0-2-0).
+- **Interactive 3-Point Angle Protractor**: Click any 3 arbitrary points directly on the canvas to measure joint angles and inclinations.
+- **Video Scrubbing & Slow-Motion**: Frame-by-frame stepping (-0.033s / +0.033s, arrow keys) and playback speed controls (0.25x, 0.5x, 1.0x).
+- **Real-Time Kinematic Waveform**: Plots instantaneous joint displacement and tracks peak movement velocity in real time.
+- **Local Storage History & Raw CSV Export**: Persists workout sets locally in browser storage and enables one-click raw CSV telemetry export.
+- **Report & Video Export**: WebCodecs and MediaRecorder MP4/WebM export with burned-in telemetry HUD and printable biomechanical athlete summaries.
 
 ## Supported Exercise Catalog
 
