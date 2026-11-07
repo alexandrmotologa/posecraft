@@ -65,30 +65,31 @@ async function main() {
   await page.screenshot({ path: mobilePath });
   console.log(`✓ Saved mobile screenshot: ${mobilePath}`);
 
-  // 4. Capture Frames for Animated Demo GIF (Desktop view, 1280x820)
-  console.log('Setting up demo GIF recording viewport (1280x820)...');
-  await page.setViewport({ width: 1280, height: 820, deviceScaleFactor: 1 });
+  // 4. Capture Frames for Animated Demo GIF (Desktop view, 1280x780)
+  console.log('Setting up extended demo GIF recording viewport (1280x780)...');
+  await page.setViewport({ width: 1280, height: 780, deviceScaleFactor: 1 });
   await page.goto('http://127.0.0.1:3000/', { waitUntil: 'networkidle2' });
-  await new Promise(r => setTimeout(r, 1500));
+  await new Promise(r => setTimeout(r, 600));
 
-  // Focus on the studio area (video canvas, metrics, and kinematic chart)
-  console.log('Capturing 60 sequential frames for demo GIF...');
-  for (let i = 0; i < 60; i++) {
+  // Capture 110 sequential frames (~7 seconds) showcasing 3 full squat reps,
+  // angle dials descending to depth, rep counter increments, and kinematic waveform
+  console.log('Capturing 110 sequential frames for extended demo GIF (6.8s, 3 full repetitions)...');
+  for (let i = 0; i < 110; i++) {
     const framePath = path.join(tmpFramesDir, `frame_${String(i).padStart(3, '0')}.png`);
     await page.screenshot({ path: framePath });
-    await new Promise(r => setTimeout(r, 50)); // ~20 fps
+    await new Promise(r => setTimeout(r, 55));
   }
 
   await browser.close();
 
   // 5. Compile with ffmpeg
-  console.log('Compiling frames into animated GIF using ffmpeg...');
+  console.log('Compiling frames into animated GIF using ffmpeg (16 fps)...');
   const gifPath = path.join(outputDir, 'posecraft_demo.gif');
   const inputPattern = path.join(tmpFramesDir, 'frame_%03d.png');
 
-  const ffmpegCmd = `ffmpeg -y -framerate 20 -i "${inputPattern}" -vf "fps=20,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" "${gifPath}"`;
+  const ffmpegCmd = `ffmpeg -y -framerate 16 -i "${inputPattern}" -vf "fps=16,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" "${gifPath}"`;
   execSync(ffmpegCmd, { stdio: 'inherit' });
-  console.log(`✓ Successfully generated animated demo GIF: ${gifPath}`);
+  console.log(`✓ Successfully generated extended animated demo GIF: ${gifPath}`);
 
   // Clean up tmp_frames
   fs.rmSync(tmpFramesDir, { recursive: true, force: true });

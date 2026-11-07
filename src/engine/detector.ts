@@ -41,13 +41,13 @@ export function generateKinematicSkeleton(
     case 'bulgarian_squat':
     case 'fms_overhead_squat':
     case 'sit_to_stand': {
-      // Squatting: hips descend and translate slightly back, knees track forward/down
-      const hipDepth = t * 0.16; // descends by 0.16 screen units
+      // Squatting: hips descend down and translate back, knees track forward into deep below-parallel squat
+      const hipDepth = t * 0.22; // descends by 0.22 screen units
       const kneeY = 0.68 + t * 0.04;
       const hipY = 0.50 + hipDepth;
-      const hipX = 0.50 - t * 0.03; // slight hip back shift
+      const hipX = 0.50 - t * 0.04; // natural hip back shift
 
-      const valgusOffset = faultMode === 'valgus' ? t * 0.07 : 0; // inward medial collapse
+      const valgusOffset = faultMode === 'valgus' ? t * 0.06 : 0; // inward medial collapse
 
       landmarks[LandmarkIndex.LEFT_SHOULDER] = { x: 0.45 - t * 0.02, y: 0.30 + hipDepth, z: 0, visibility: 0.99 };
       landmarks[LandmarkIndex.RIGHT_SHOULDER] = { x: 0.55 - t * 0.02, y: 0.30 + hipDepth, z: 0, visibility: 0.99 };
@@ -60,8 +60,8 @@ export function generateKinematicSkeleton(
       landmarks[LandmarkIndex.LEFT_HIP] = { x: hipX - 0.06, y: hipY, z: 0, visibility: 0.99 };
       landmarks[LandmarkIndex.RIGHT_HIP] = { x: hipX + 0.06, y: hipY, z: 0, visibility: 0.99 };
 
-      landmarks[LandmarkIndex.LEFT_KNEE] = { x: 0.43 + valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
-      landmarks[LandmarkIndex.RIGHT_KNEE] = { x: 0.57 - valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
+      landmarks[LandmarkIndex.LEFT_KNEE] = { x: 0.43 + t * 0.070 + valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
+      landmarks[LandmarkIndex.RIGHT_KNEE] = { x: 0.57 - t * 0.070 - valgusOffset, y: kneeY, z: 0.04, visibility: 0.99 };
 
       landmarks[LandmarkIndex.LEFT_ANKLE] = { x: 0.44, y: 0.88, z: 0, visibility: 0.99 };
       landmarks[LandmarkIndex.RIGHT_ANKLE] = { x: 0.56, y: 0.88, z: 0, visibility: 0.99 };
