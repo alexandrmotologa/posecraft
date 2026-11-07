@@ -83,6 +83,7 @@ export const VideoCanvas: React.FC<VideoCanvasProps> = ({
         playsInline
         muted
         loop
+        autoPlay
         src={videoUrl || undefined}
         className={`absolute inset-0 w-full h-full object-cover ${
           inputSource === 'webcam' ? 'block' : 'hidden'

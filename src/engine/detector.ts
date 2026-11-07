@@ -234,6 +234,7 @@ export function generateKinematicSkeleton(
 export class MediaPipePoseDetector implements PoseDetectorEngine {
   private poseLandmarker: unknown = null;
   private isReady: boolean = false;
+  private lastTimestampMs: number = -1;
 
   public async initialize(): Promise<void> {
     if (this.isReady) return;
@@ -241,25 +242,43 @@ export class MediaPipePoseDetector implements PoseDetectorEngine {
     try {
       const vision = await import('@mediapipe/tasks-vision');
       const filesetResolver = await vision.FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
       );
 
-      this.poseLandmarker = await vision.PoseLandmarker.createFromOptions(filesetResolver, {
-        baseOptions: {
-          modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
-          delegate: 'GPU',
-        },
-        runningMode: 'VIDEO',
-        numPoses: 1,
-        minPoseDetectionConfidence: 0.5,
-        minPosePresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
+      const modelAssetPath =
+        'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+
+      try {
+        // Try hardware-accelerated GPU delegate first
+        this.poseLandmarker = await vision.PoseLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath,
+            delegate: 'GPU',
+          },
+          runningMode: 'VIDEO',
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+      } catch {
+        // Graceful fallback to CPU delegate if WebGPU/WebGL2 is not supported on user's device
+        this.poseLandmarker = await vision.PoseLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath,
+            delegate: 'CPU',
+          },
+          runningMode: 'VIDEO',
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+      }
 
       this.isReady = true;
     } catch {
-      // If WebGPU / remote network CDN fails, system seamlessly operates in simulated/manual mode
+      // If network CDN or Wasm runtime is unavailable, graceful degradation
       this.isReady = false;
     }
   }
@@ -275,12 +294,16 @@ export class MediaPipePoseDetector implements PoseDetectorEngine {
         };
       };
 
-      const result = detector.detectForVideo(videoElement, timestampMs);
+      // Guarantee strictly monotonic timestamps required by MediaPipe VIDEO mode
+      const safeTime = timestampMs <= this.lastTimestampMs ? this.lastTimestampMs + 1 : timestampMs;
+      this.lastTimestampMs = safeTime;
+
+      const result = detector.detectForVideo(videoElement, safeTime);
       if (result && result.landmarks && result.landmarks.length > 0) {
         return {
           landmarks: result.landmarks[0],
           worldLandmarks: result.worldLandmarks ? result.worldLandmarks[0] : undefined,
-          timestampMs,
+          timestampMs: safeTime,
         };
       }
     } catch {
@@ -300,5 +323,6 @@ export class MediaPipePoseDetector implements PoseDetectorEngine {
       this.poseLandmarker = null;
     }
     this.isReady = false;
+    this.lastTimestampMs = -1;
   }
 }

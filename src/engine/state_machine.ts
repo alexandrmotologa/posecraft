@@ -65,6 +65,10 @@ export class RepetitionStateMachine {
     return [...this.repHistory];
   }
 
+  public getLastRepetition(): RepetitionEvent | null {
+    return this.repHistory.length > 0 ? this.repHistory[this.repHistory.length - 1] : null;
+  }
+
   public recordFault(fault: string): void {
     if (this.state !== 'IDLE') {
       this.currentRepFaults.add(fault);

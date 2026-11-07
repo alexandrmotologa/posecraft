@@ -104,6 +104,7 @@ export interface FrameMetrics {
   primaryMetric: number;
   repState: RepState;
   repCount: number;
+  completedRep?: RepetitionEvent;
   activeAlerts: SafetyAlert[];
   telemetry: Record<string, number | string | boolean>;
   formScore: number; // 0 to 100 real-time score
@@ -146,4 +147,5 @@ export interface ExerciseRule {
   evaluateFrame(skeleton: Skeleton, baseline: UserBaseline, timestampMs: number): FrameMetrics;
   reset(): void;
   getSummary(): ExerciseSummary;
+  getLastRepetition?(): RepetitionEvent | null;
 }

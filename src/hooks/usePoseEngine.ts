@@ -88,7 +88,7 @@ export function usePoseEngine({
     protractorRef.current.clear();
   }, []);
 
-  // Handle webcam stream initialization
+  // Handle webcam stream & video model initialization
   useEffect(() => {
     let stream: MediaStream | null = null;
 
@@ -115,6 +115,23 @@ export function usePoseEngine({
           setCameraActive(false);
           setModelLoading(false);
         });
+    } else if (inputSource === 'upload') {
+      // In upload mode, initialize the neural pose detector for video frames
+      setModelLoading(true);
+      detectorRef.current.initialize()
+        .then(() => {
+          setModelLoading(false);
+        })
+        .catch(() => {
+          setModelLoading(false);
+        });
+
+      if (videoRef.current && videoRef.current.srcObject) {
+        const currentStream = videoRef.current.srcObject as MediaStream;
+        currentStream.getTracks().forEach(t => t.stop());
+        videoRef.current.srcObject = null;
+      }
+      setCameraActive(false);
     } else {
       if (videoRef.current && videoRef.current.srcObject) {
         const currentStream = videoRef.current.srcObject as MediaStream;
@@ -139,6 +156,7 @@ export function usePoseEngine({
     let lastFpsUpdate = performance.now();
     let syntheticProgress = 0;
     let lastRepCount = 0;
+    let lastRepTime = performance.now();
 
     const loop = (currentTime: number) => {
       const deltaMs = currentTime - lastFrameTime;
@@ -204,22 +222,38 @@ export function usePoseEngine({
           // Check if repetition completed
           if (metrics.repCount > lastRepCount) {
             lastRepCount = metrics.repCount;
-            onRepetitionCompleted({
-              repNumber: metrics.repCount,
-              startTimeMs: currentTime - 1500,
-              peakTimeMs: currentTime - 800,
-              endTimeMs: currentTime,
-              durationMs: 1500,
-              concentricMs: 800,
-              eccentricMs: 700,
-              peakRom: metrics.primaryMetric,
-              romScore: metrics.formScore,
-              faults: metrics.activeAlerts.map(a => a.name),
-              passed: metrics.activeAlerts.length === 0,
-              tempoString: '1.2s / 0.9s',
-            });
-            audioEngine.playRepDing();
-            voiceCoach.speakRep(metrics.repCount);
+
+            // Fetch true repetition telemetry calculated by the dual-threshold hysteresis engine
+            const stateMachineInstance = (rule as unknown as { stateMachine?: { getLastRepetition?: () => RepetitionEvent | null } }).stateMachine;
+            const measuredRep = rule.getLastRepetition?.() || stateMachineInstance?.getLastRepetition?.() || metrics.completedRep;
+
+            if (measuredRep) {
+              onRepetitionCompleted(measuredRep);
+              audioEngine.playRepDing();
+              voiceCoach.speakRep(measuredRep.repNumber);
+            } else {
+              const repDuration = Math.max(600, currentTime - lastRepTime);
+              lastRepTime = currentTime;
+              const concentric = Math.round(repDuration * 0.52);
+              const eccentric = repDuration - concentric;
+
+              onRepetitionCompleted({
+                repNumber: metrics.repCount,
+                startTimeMs: currentTime - repDuration,
+                peakTimeMs: currentTime - eccentric,
+                endTimeMs: currentTime,
+                durationMs: repDuration,
+                concentricMs: concentric,
+                eccentricMs: eccentric,
+                peakRom: Math.round(metrics.primaryMetric),
+                romScore: metrics.formScore,
+                faults: metrics.activeAlerts.map(a => a.name),
+                passed: metrics.activeAlerts.length === 0,
+                tempoString: `${(concentric / 1000).toFixed(1)}s / ${(eccentric / 1000).toFixed(1)}s`,
+              });
+              audioEngine.playRepDing();
+              voiceCoach.speakRep(metrics.repCount);
+            }
           }
 
           // Trigger audio and voice coaching for safety alerts
