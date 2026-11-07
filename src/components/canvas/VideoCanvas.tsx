@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CameraPerspective } from '../../engine/types';
-import { Camera, AlertCircle, Video, Download } from 'lucide-react';
+import { Camera, AlertCircle, Video, Download, Maximize2, Minimize2, Mic } from 'lucide-react';
 
 interface VideoCanvasProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -12,6 +12,11 @@ interface VideoCanvasProps {
   cameraActive: boolean;
   modelLoading: boolean;
   videoUrl: string | null;
+  countdownSeconds?: number;
+  isCountdownActive?: boolean;
+  lastVoiceCommand?: string | null;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const VideoCanvas: React.FC<VideoCanvasProps> = ({
@@ -24,10 +29,29 @@ export const VideoCanvas: React.FC<VideoCanvasProps> = ({
   cameraActive,
   modelLoading,
   videoUrl,
+  countdownSeconds = 0,
+  isCountdownActive = false,
+  lastVoiceCommand = null,
+  isFullscreen = false,
+  onToggleFullscreen,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [recordDurationSeconds, setRecordDurationSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+
+  // Elapsed recording timer
+  useEffect(() => {
+    let interval: any = null;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordDurationSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      setRecordDurationSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
   // Check perspective alignment
   const isPerspectiveMismatch =
@@ -76,7 +100,11 @@ export const VideoCanvas: React.FC<VideoCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-full aspect-video bg-[#05070c] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
+    <div
+      className={`relative w-full aspect-video bg-[#05070c] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center ${
+        isFullscreen ? 'fixed inset-0 z-50 rounded-none border-none aspect-auto h-screen' : ''
+      }`}
+    >
       {/* Hidden/Underlay Video Tag */}
       <video
         ref={videoRef}
@@ -97,6 +125,26 @@ export const VideoCanvas: React.FC<VideoCanvasProps> = ({
         height={540}
         className="absolute inset-0 w-full h-full object-contain z-10"
       />
+
+      {/* Hands-Free Pre-Set Countdown Visual Overlay */}
+      {isCountdownActive && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xs pointer-events-none">
+          <div className="w-24 h-24 rounded-full border-4 border-cyan-400 bg-slate-950/80 flex items-center justify-center text-5xl font-mono font-extrabold text-cyan-300 shadow-2xl shadow-cyan-500/50 animate-bounce">
+            {countdownSeconds}
+          </div>
+          <div className="mt-3 text-xs font-mono font-bold uppercase tracking-widest text-cyan-400 bg-slate-900/90 px-3 py-1 rounded-full border border-cyan-800">
+            Assume Starting Position
+          </div>
+        </div>
+      )}
+
+      {/* Voice Commander Recognition Feedback Pill */}
+      {lastVoiceCommand && (
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-25 bg-rose-950/90 border border-rose-500/80 text-rose-200 px-3 py-1 rounded-full text-xs font-mono flex items-center gap-1.5 shadow-xl animate-bounce">
+          <Mic className="w-3.5 h-3.5 text-rose-400" />
+          <span>Voice: "{lastVoiceCommand}"</span>
+        </div>
+      )}
 
       {/* Model Loading State */}
       {modelLoading && (
@@ -130,6 +178,27 @@ export const VideoCanvas: React.FC<VideoCanvasProps> = ({
           <Camera className={`w-3 h-3 ${cameraActive ? 'text-emerald-400' : 'text-cyan-400'}`} />
           <span className="capitalize">{inputSource} Feed</span>
         </div>
+
+        {/* Live Recording Timer */}
+        {isRecording && (
+          <div className="bg-red-950/80 backdrop-blur-md border border-red-500/80 rounded-lg px-2.5 py-1 flex items-center gap-1.5 text-[11px] font-mono text-red-300 animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-red-500" />
+            <span>REC {Math.floor(recordDurationSeconds / 60)}:{String(recordDurationSeconds % 60).padStart(2, '0')}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Top-Right HUD Controls (Fullscreen) */}
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+        {onToggleFullscreen && (
+          <button
+            onClick={onToggleFullscreen}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen Workout HUD'}
+            className="p-1.5 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur-md border border-slate-700/60 text-slate-200 hover:text-white transition-all shadow-md"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-cyan-400" /> : <Maximize2 className="w-4 h-4 text-cyan-400" />}
+          </button>
+        )}
       </div>
 
       {/* Bottom HUD Controls (Record Video) */}

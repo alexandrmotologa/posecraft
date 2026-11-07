@@ -1,17 +1,24 @@
 import React from 'react';
 import { FrameMetrics, ExerciseRule } from '../../engine/types';
-import { ShieldAlert, Zap, Clock, TrendingUp } from 'lucide-react';
+import { VbtRepetitionData } from '../../engine/vbt';
+import { ShieldAlert, Zap, Clock, TrendingUp, Gauge, Compass } from 'lucide-react';
 
 interface MetricsDashboardProps {
   metrics: FrameMetrics | null;
   rule: ExerciseRule;
   fps: number;
+  vbtData?: VbtRepetitionData | null;
+  comBalanceStatus?: 'optimal' | 'heel_heavy' | 'toe_heavy' | null;
+  comOffset?: number;
 }
 
 export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
   metrics,
   rule,
   fps,
+  vbtData,
+  comBalanceStatus = 'optimal',
+  comOffset = 0,
 }) => {
   const repCount = metrics?.repCount ?? 0;
   const primaryVal = metrics?.primaryMetric ?? 0;
@@ -101,11 +108,66 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
       </div>
 
-      {/* 4. Active Biomechanical Telemetry */}
+      {/* 4. Velocity-Based Training (VBT) Mean Velocity */}
       <div className="bg-[#0e131f] border border-slate-800/80 rounded-xl p-3.5 shadow-lg relative overflow-hidden">
         <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
           <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-purple-400" /> Telemetry HUD
+            <Gauge className="w-3.5 h-3.5 text-pink-400" /> VBT Velocity
+          </span>
+          <span className="text-[10px] font-mono text-slate-500">m/s</span>
+        </div>
+        <div className="text-3xl font-extrabold font-mono text-slate-100 tracking-tight flex items-baseline gap-2">
+          <span>{vbtData ? vbtData.meanConcentricVelocity : '0.65'}</span>
+          <span className="text-xs font-normal text-slate-400">m/s</span>
+          {vbtData && vbtData.velocityLossPercent > 0 && (
+            <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded border ${
+              vbtData.fatigueWarning
+                ? 'bg-red-950/60 border-red-500 text-red-300'
+                : 'bg-cyan-950/60 border-cyan-700 text-cyan-300'
+            }`}>
+              -{vbtData.velocityLossPercent}% drop
+            </span>
+          )}
+        </div>
+        <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+          {vbtData ? vbtData.zone.replace(/_/g, ' ').toUpperCase() : 'OPTIMAL HYPERTROPHY ZONE'}
+        </div>
+      </div>
+
+      {/* 5. Center of Mass & Ground Balance */}
+      <div className="bg-[#0e131f] border border-slate-800/80 rounded-xl p-3.5 shadow-lg relative overflow-hidden">
+        <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-cyan-400" /> CoM Balance
+          </span>
+          <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border ${
+            comBalanceStatus === 'optimal'
+              ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+              : 'bg-amber-950 text-amber-400 border-amber-800'
+          }`}>
+            {(comBalanceStatus || 'optimal').replace(/_/g, ' ').toUpperCase()}
+          </span>
+        </div>
+        {/* Balance spectrum bar */}
+        <div className="w-full h-2 bg-slate-900 rounded-full mt-2 relative overflow-hidden border border-slate-800">
+          <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-emerald-500 z-10"></div>
+          <div
+            className="absolute top-0 bottom-0 w-3 bg-cyan-400 rounded-full shadow-sm transition-all"
+            style={{ left: `${Math.max(5, Math.min(95, 50 + comOffset * 40))}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between text-[9px] font-mono text-slate-500 mt-1">
+          <span>Heel</span>
+          <span className="text-emerald-400 font-bold">Midfoot Center</span>
+          <span>Toe</span>
+        </div>
+      </div>
+
+      {/* 6. Active Biomechanical Telemetry */}
+      <div className="bg-[#0e131f] border border-slate-800/80 rounded-xl p-3.5 shadow-lg relative overflow-hidden">
+        <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <span className="font-semibold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-purple-400" /> Kinematic Telemetry
           </span>
           <span className="text-[10px] font-mono text-cyan-400">Scale-Invariant</span>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   ExerciseRule,
   FrameMetrics,
+  Landmark,
   LandmarkIndex,
   RepetitionEvent,
   SafetyAlert,
@@ -16,6 +17,48 @@ import { PathTracer } from '../components/canvas/PathTracer';
 import { CustomProtractor } from '../components/canvas/CustomProtractor';
 import { audioEngine } from '../engine/audio';
 import { voiceCoach } from '../engine/voice_coach';
+import { centerOfMassEngine, CenterOfMassResult } from '../engine/com';
+
+function renderGhostOverlay(
+  ctx: CanvasRenderingContext2D,
+  landmarks: Landmark[],
+  width: number,
+  height: number
+) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(192, 132, 252, 0.45)';
+  ctx.fillStyle = 'rgba(192, 132, 252, 0.60)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+
+  const BONE_PAIRS: [number, number][] = [
+    [LandmarkIndex.LEFT_SHOULDER, LandmarkIndex.RIGHT_SHOULDER],
+    [LandmarkIndex.LEFT_SHOULDER, LandmarkIndex.LEFT_ELBOW],
+    [LandmarkIndex.LEFT_ELBOW, LandmarkIndex.LEFT_WRIST],
+    [LandmarkIndex.RIGHT_SHOULDER, LandmarkIndex.RIGHT_ELBOW],
+    [LandmarkIndex.RIGHT_ELBOW, LandmarkIndex.RIGHT_WRIST],
+    [LandmarkIndex.LEFT_SHOULDER, LandmarkIndex.LEFT_HIP],
+    [LandmarkIndex.RIGHT_SHOULDER, LandmarkIndex.RIGHT_HIP],
+    [LandmarkIndex.LEFT_HIP, LandmarkIndex.RIGHT_HIP],
+    [LandmarkIndex.LEFT_HIP, LandmarkIndex.LEFT_KNEE],
+    [LandmarkIndex.LEFT_KNEE, LandmarkIndex.LEFT_ANKLE],
+    [LandmarkIndex.RIGHT_HIP, LandmarkIndex.RIGHT_KNEE],
+    [LandmarkIndex.RIGHT_KNEE, LandmarkIndex.RIGHT_ANKLE],
+  ];
+
+  BONE_PAIRS.forEach(([i, j]) => {
+    const a = landmarks[i];
+    const b = landmarks[j];
+    if (a && b) {
+      ctx.beginPath();
+      ctx.moveTo(a.x * width, a.y * height);
+      ctx.lineTo(b.x * width, b.y * height);
+      ctx.stroke();
+    }
+  });
+
+  ctx.restore();
+}
 
 export interface UsePoseEngineProps {
   exerciseId: string;
@@ -23,9 +66,13 @@ export interface UsePoseEngineProps {
   isAnalyzing: boolean;
   syntheticFaultMode: 'none' | 'valgus' | 'rounding' | 'kipping' | 'sag';
   playbackSpeed: number;
-  onRepetitionCompleted: (event: RepetitionEvent) => void;
+  showCenterOfMass?: boolean;
+  showGhostOverlay?: boolean;
+  bestRepLandmarks?: Landmark[] | null;
+  onRepetitionCompleted: (event: RepetitionEvent, landmarks?: Landmark[]) => void;
   onMetricsUpdated: (metrics: FrameMetrics) => void;
   onAlertsUpdated: (alerts: SafetyAlert[]) => void;
+  onComUpdated?: (com: CenterOfMassResult) => void;
 }
 
 export function usePoseEngine({
@@ -34,9 +81,13 @@ export function usePoseEngine({
   isAnalyzing,
   syntheticFaultMode,
   playbackSpeed,
+  showCenterOfMass = true,
+  showGhostOverlay = false,
+  bestRepLandmarks = null,
   onRepetitionCompleted,
   onMetricsUpdated,
   onAlertsUpdated,
+  onComUpdated,
 }: UsePoseEngineProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -60,6 +111,18 @@ export function usePoseEngine({
 
   const onAlertsUpdatedRef = useRef(onAlertsUpdated);
   onAlertsUpdatedRef.current = onAlertsUpdated;
+
+  const onComUpdatedRef = useRef(onComUpdated);
+  onComUpdatedRef.current = onComUpdated;
+
+  const showCenterOfMassRef = useRef(showCenterOfMass);
+  showCenterOfMassRef.current = showCenterOfMass;
+
+  const showGhostOverlayRef = useRef(showGhostOverlay);
+  showGhostOverlayRef.current = showGhostOverlay;
+
+  const bestRepLandmarksRef = useRef(bestRepLandmarks);
+  bestRepLandmarksRef.current = bestRepLandmarks;
 
   const [fps, setFps] = useState<number>(60);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
@@ -243,7 +306,7 @@ export function usePoseEngine({
             const measuredRep = rule.getLastRepetition?.() || stateMachineInstance?.getLastRepetition?.() || metrics.completedRep;
 
             if (measuredRep) {
-              onRepetitionCompletedRef.current(measuredRep);
+              onRepetitionCompletedRef.current(measuredRep, filteredLandmarks);
               audioEngine.playRepDing();
               voiceCoach.speakRep(measuredRep.repNumber);
             } else {
@@ -265,7 +328,7 @@ export function usePoseEngine({
                 faults: metrics.activeAlerts.map(a => a.name),
                 passed: metrics.activeAlerts.length === 0,
                 tempoString: `${(concentric / 1000).toFixed(1)}s / ${(eccentric / 1000).toFixed(1)}s`,
-              });
+              }, filteredLandmarks);
               audioEngine.playRepDing();
               voiceCoach.speakRep(metrics.repCount);
             }
@@ -290,8 +353,22 @@ export function usePoseEngine({
             if (wrist) targetDepthY = wrist.y; // chin must pass wrist line
           }
 
-          // Render skeleton HUD with isolated bone segment stress coloring
+          // 1. Render Ghost Overlay (Translucent comparison with best rep) if active
+          if (showGhostOverlayRef.current && bestRepLandmarksRef.current) {
+            renderGhostOverlay(ctx, bestRepLandmarksRef.current, width, height);
+          }
+
+          // 2. Render skeleton HUD with isolated bone segment stress coloring
           renderSkeletonHUD(ctx, filteredLandmarks, width, height, metrics.activeAlerts, targetDepthY);
+
+          // 3. Calculate and Render Whole-Body Center of Mass (CoM) & Ground Projection
+          const comResult = centerOfMassEngine.calculateCoM(filteredLandmarks);
+          if (comResult) {
+            onComUpdatedRef.current?.(comResult);
+            if (showCenterOfMassRef.current) {
+              centerOfMassEngine.renderCoM(ctx, comResult, width, height);
+            }
+          }
 
           // Draw joint angle dials for relevant exercise joints
           if (metrics.angles.kneeAngle !== undefined && filteredLandmarks[LandmarkIndex.LEFT_KNEE]) {

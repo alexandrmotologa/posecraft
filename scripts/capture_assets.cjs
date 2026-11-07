@@ -53,6 +53,23 @@ async function main() {
     }
   }
 
+  // 2b. Open Printable Clinical Evaluation Report Modal
+  console.log('Capturing Printable Clinical PDF Modal...');
+  const clinicalBtn = await page.$('button:has(svg.lucide-printer)');
+  if (clinicalBtn) {
+    await clinicalBtn.click();
+    await new Promise(r => setTimeout(r, 700));
+    const clinicalPath = path.join(outputDir, 'posecraft_clinical_print_modal.png');
+    await page.screenshot({ path: clinicalPath });
+    console.log(`✓ Saved printable clinical modal: ${clinicalPath}`);
+
+    const closeBtn = await page.$('button:has(svg.lucide-x)');
+    if (closeBtn) {
+      await closeBtn.click();
+      await new Promise(r => setTimeout(r, 400));
+    }
+  }
+
   // 3. Mobile Viewport (390x844)
   console.log('Capturing Mobile Viewport (390x844)...');
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });

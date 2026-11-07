@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Pose%20Model-MediaPipe%2033%20Joints-0284c7?style=flat-square" alt="MediaPipe" />
   <img src="https://img.shields.io/badge/Frontend-React%2019%20%2B%20TypeScript-3b82f6?style=flat-square" alt="React 19" />
   <img src="https://img.shields.io/badge/Privacy-Zero%20Cloud%20Uploads-10b981?style=flat-square" alt="Zero Cloud Uploads" />
-  <img src="https://img.shields.io/badge/Tests-55%20Passing-emerald?style=flat-square" alt="Tests 55 Passing" />
+  <img src="https://img.shields.io/badge/Tests-65%20Passing-emerald?style=flat-square" alt="Tests 65 Passing" />
   <img src="https://img.shields.io/badge/License-MIT-slate?style=flat-square" alt="License MIT" />
 </p>
 
@@ -27,6 +27,14 @@ PoseCraft is a client-side biomechanical movement analysis laboratory and repeti
 ## Key Capabilities
 
 - **28 Biomechanical Modules Across 6 Suites**: Calisthenics, Barbell & Hypertrophy, Unilateral & Lower Body, Conditioning, Athletic Power, and Kinetotherapy / Mobility.
+- **Velocity-Based Training (VBT) Engine**: Calculates Mean Concentric Velocity (m/s), Peak Velocity, and Velocity Loss % in real time. Classifies reps into 4 zones (Absolute Strength, Strength-Speed, Speed-Strength, and Speed & Power) with automated fatigue limit warnings.
+- **Whole-Body Center of Mass (CoM) Projection**: Uses Dempster segmental mass distribution models across all 33 anatomical landmarks. Renders an active CoM reticle, vertical ground line, and midfoot base of support stability index.
+- **Hands-Free Web Speech Voice Commander**: Local speech recognition for commands like "start set", "stop set", "reset", "report", "fullscreen", and "mute" without touching the device.
+- **Auto-Countdown Pre-Set Timer**: Configurable 5-second acoustic and visual timer that gives athletes time to position before tracking begins.
+- **Translucent Ghost Skeleton Overlay**: Displays an ideal kinematic trajectory benchmark over live video to guide movement path and depth.
+- **Athlete Experience Profiles**: Adjusts valgus sensitivity, bilateral asymmetry tolerance (5% to 15%), and minimum depth across 4 tiers: Rehab / PT, Beginner, Intermediate, and Elite.
+- **Multi-Exercise Routine & Circuit Builder**: Preset circuits with automated inter-set rest countdowns and station progression.
+- **Printable Clinical Evaluation PDF Report**: Formatted clinical assessment documentation with print-optimized styling, joint range of motion charts, and bilateral asymmetry analysis.
 - **Anatomical Scale Invariance**: Normalizes all linear metrics against the user's torso length and limb baselines. Measurements stay accurate across different camera distances.
 - **Dual-Threshold Repetition State Machine**: Uses hysteresis to prevent double counting from muscle tremor or pause points.
 - **Adaptive Kalman Jitter Filtering**: Smooths 33 anatomical landmark coordinates in real time while preserving high-speed concentric movement spikes.
@@ -55,10 +63,11 @@ PoseCraft is a client-side biomechanical movement analysis laboratory and repeti
 ### Real-Time Biomechanical Movement Studio
 ![PoseCraft Desktop Dashboard](docs/images/posecraft_desktop_dashboard.png?raw=true)
 
-### Clinical Athlete Report & Mobile Responsive Design
+### Clinical Athlete Reports & Mobile Responsive Interface
 <p align="center">
-  <img src="docs/images/posecraft_report_modal.png?raw=true" alt="Athlete Assessment Report" width="62%" style="border-radius: 12px; vertical-align: top; margin-right: 2%;" />
-  <img src="docs/images/posecraft_mobile.png?raw=true" alt="PoseCraft Mobile Responsive Interface" width="34%" style="border-radius: 12px; vertical-align: top;" />
+  <img src="docs/images/posecraft_report_modal.png?raw=true" alt="Athlete Assessment Report" width="31%" style="border-radius: 12px; vertical-align: top; margin-right: 1.5%;" />
+  <img src="docs/images/posecraft_clinical_print_modal.png?raw=true" alt="Printable Clinical Evaluation PDF Report" width="31%" style="border-radius: 12px; vertical-align: top; margin-right: 1.5%;" />
+  <img src="docs/images/posecraft_mobile.png?raw=true" alt="PoseCraft Mobile Responsive Interface" width="31%" style="border-radius: 12px; vertical-align: top;" />
 </p>
 
 ## Architecture Overview
@@ -111,6 +120,22 @@ Evaluates collinearity between the cervical base, mid-thoracic point, and sacrum
 $$\Delta\theta_{\text{spine}} = |180^\circ - \text{Angle}(\mathbf{s}_1, \mathbf{s}_2)|$$
 
 Values above $22^\circ$ trigger an immediate lumbar rounding alert.
+
+### Mean Concentric Velocity (VBT)
+Calculates vertical barbell/body center velocity across the upward propulsion phase:
+
+$$\bar{v}_{\text{concentric}} = \frac{\Delta y_{\text{displacement}}}{\Delta t_{\text{concentric}}}$$
+
+Velocity loss relative to the fastest repetition in the current set:
+
+$$\text{Loss}_{\%} = \frac{v_{\text{fastest}} - \bar{v}_{\text{rep}}}{v_{\text{fastest}}} \times 100\%$$
+
+### Center of Mass (CoM) Projection
+Calculates 2D center of mass using Dempster segment mass coefficients:
+
+$$\mathbf{r}_{\text{CoM}} = \sum_{k=1}^{N} \mu_k \cdot \mathbf{r}_k$$
+
+Where $\mu_{\text{trunk}} = 0.497$, $\mu_{\text{thighs}} = 0.200$, $\mu_{\text{shanks}} = 0.122$, $\mu_{\text{head}} = 0.081$, and limb segments comprise the remaining mass. Midfoot stability evaluates the horizontal offset between $\mathbf{r}_{\text{CoM}}$ and the midpoint of the heel-toe base of support.
 
 ## Getting Started
 

@@ -2,11 +2,15 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   ExerciseCategory,
   FrameMetrics,
+  Landmark,
   RepetitionEvent,
   SafetyAlert,
 } from '../engine/types';
 import { audioEngine } from '../engine/audio';
 import { voiceCoach } from '../engine/voice_coach';
+import { vbtEngine, VbtRepetitionData } from '../engine/vbt';
+import { AthleteLevelTier } from '../engine/athlete_level';
+import { WorkoutRoutine } from '../engine/routine';
 import { SavedWorkoutSession } from '../components/export/SessionHistoryModal';
 
 const STORAGE_KEY = 'posecraft_saved_sessions_v1';
@@ -20,12 +24,23 @@ export function useWorkoutStore() {
   const [isVoiceCoachEnabled, setIsVoiceCoachEnabled] = useState<boolean>(true);
   const [metrics, setMetrics] = useState<FrameMetrics | null>(null);
   const [repHistory, setRepHistory] = useState<RepetitionEvent[]>([]);
+  const [vbtHistory, setVbtHistory] = useState<VbtRepetitionData[]>([]);
   const [activeAlerts, setActiveAlerts] = useState<SafetyAlert[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [syntheticFaultMode, setSyntheticFaultMode] = useState<'none' | 'valgus' | 'rounding' | 'kipping' | 'sag'>('none');
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [savedSessions, setSavedSessions] = useState<SavedWorkoutSession[]>([]);
+
+  // Advanced Biomechanical & Athletic State
+  const [athleteTier, setAthleteTier] = useState<AthleteLevelTier>('intermediate');
+  const [showCenterOfMass, setShowCenterOfMass] = useState<boolean>(true);
+  const [showGhostOverlay, setShowGhostOverlay] = useState<boolean>(false);
+  const [bestRepLandmarks, setBestRepLandmarks] = useState<Landmark[] | null>(null);
+  const [isVoiceCommanderActive, setIsVoiceCommanderActive] = useState<boolean>(false);
+  const [lastVoiceCommand, setLastVoiceCommand] = useState<string | null>(null);
+  const [activeRoutine, setActiveRoutine] = useState<WorkoutRoutine | null>(null);
+  const [currentRoutineStep, setCurrentRoutineStep] = useState<number>(0);
 
   // Load saved sessions on mount
   useEffect(() => {
@@ -55,10 +70,37 @@ export function useWorkoutStore() {
     });
   }, []);
 
-  const addRepEvent = useCallback((event: RepetitionEvent) => {
+  const toggleCenterOfMass = useCallback(() => {
+    setShowCenterOfMass(prev => !prev);
+  }, []);
+
+  const toggleGhostOverlay = useCallback(() => {
+    setShowGhostOverlay(prev => !prev);
+  }, []);
+
+  const toggleVoiceCommander = useCallback(() => {
+    setIsVoiceCommanderActive(prev => !prev);
+  }, []);
+
+  const addRepEvent = useCallback((event: RepetitionEvent, currentLandmarks?: Landmark[]) => {
     setRepHistory(prev => [event, ...prev]);
-    audioEngine.playRepDing();
-    voiceCoach.speakRep(event.repNumber);
+
+    // Calculate VBT Velocity & Power metrics
+    const vbtData = vbtEngine.evaluateRepetition(event);
+    setVbtHistory(prev => [vbtData, ...prev]);
+
+    if (vbtData.fatigueWarning) {
+      audioEngine.playWarningAlert();
+      voiceCoach.speakAlert('fatigue_warning');
+    } else {
+      audioEngine.playRepDing();
+      voiceCoach.speakRep(event.repNumber);
+    }
+
+    // Capture highest scoring repetition for Ghost Overlay
+    if (event.romScore >= 88 && currentLandmarks) {
+      setBestRepLandmarks([...currentLandmarks]);
+    }
   }, []);
 
   const saveCurrentSession = useCallback((exerciseName: string) => {
@@ -105,10 +147,35 @@ export function useWorkoutStore() {
   }, []);
 
   const resetWorkout = useCallback(() => {
+    vbtEngine.reset();
+    setVbtHistory([]);
     setRepHistory([]);
     setActiveAlerts([]);
     setMetrics(null);
   }, []);
+
+  const startRoutine = useCallback((routine: WorkoutRoutine) => {
+    setActiveRoutine(routine);
+    setCurrentRoutineStep(0);
+    const first = routine.exercises[0];
+    if (first) {
+      setSelectedExerciseId(first.exerciseId);
+    }
+    resetWorkout();
+  }, [resetWorkout]);
+
+  const nextRoutineStep = useCallback(() => {
+    if (!activeRoutine) return;
+    const nextStep = currentRoutineStep + 1;
+    if (nextStep < activeRoutine.exercises.length) {
+      setCurrentRoutineStep(nextStep);
+      setSelectedExerciseId(activeRoutine.exercises[nextStep].exerciseId);
+      resetWorkout();
+    } else {
+      setActiveRoutine(null);
+      setCurrentRoutineStep(0);
+    }
+  }, [activeRoutine, currentRoutineStep, resetWorkout]);
 
   return {
     selectedExerciseId,
@@ -127,6 +194,7 @@ export function useWorkoutStore() {
     setMetrics,
     repHistory,
     addRepEvent,
+    vbtHistory,
     activeAlerts,
     setActiveAlerts,
     videoFile,
@@ -141,5 +209,25 @@ export function useWorkoutStore() {
     saveCurrentSession,
     clearSessionHistory,
     resetWorkout,
+    athleteTier,
+    setAthleteTier,
+    showCenterOfMass,
+    setShowCenterOfMass,
+    toggleCenterOfMass,
+    showGhostOverlay,
+    setShowGhostOverlay,
+    toggleGhostOverlay,
+    bestRepLandmarks,
+    setBestRepLandmarks,
+    isVoiceCommanderActive,
+    setIsVoiceCommanderActive,
+    toggleVoiceCommander,
+    lastVoiceCommand,
+    setLastVoiceCommand,
+    activeRoutine,
+    setActiveRoutine,
+    currentRoutineStep,
+    startRoutine,
+    nextRoutineStep,
   };
 }

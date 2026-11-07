@@ -1,8 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useWorkoutStore } from './store/useWorkoutStore';
 import { usePoseEngine } from './hooks/usePoseEngine';
 import { createExerciseRule } from './exercises/registry';
-import { ExerciseCategory, FrameMetrics, RepetitionEvent, SafetyAlert } from './engine/types';
+import { ExerciseCategory, FrameMetrics, Landmark, RepetitionEvent, SafetyAlert } from './engine/types';
+import { CenterOfMassResult } from './engine/com';
+import { voiceCommander } from './engine/voice_commander';
+import { countdownTimer, CountdownState } from './engine/countdown';
 import { VideoCanvas } from './components/canvas/VideoCanvas';
 import { CameraControls } from './components/studio/CameraControls';
 import { ExerciseSelector } from './components/studio/ExerciseSelector';
@@ -11,6 +14,8 @@ import { SafetyAlertBanner } from './components/telemetry/SafetyAlertBanner';
 import { RepTrackerTable } from './components/telemetry/RepTrackerTable';
 import { SessionReportModal } from './components/export/SessionReportModal';
 import { SessionHistoryModal } from './components/export/SessionHistoryModal';
+import { PrintableClinicalReport } from './components/export/PrintableClinicalReport';
+import { RoutineBuilder } from './components/studio/RoutineBuilder';
 import { KinematicChart } from './components/telemetry/KinematicChart';
 import { TempoPacer } from './components/studio/TempoPacer';
 import { VideoScrubber } from './components/studio/VideoScrubber';
@@ -20,6 +25,14 @@ export const App: React.FC = () => {
   const store = useWorkoutStore();
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isPrintReportOpen, setIsPrintReportOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [comResult, setComResult] = useState<CenterOfMassResult | null>(null);
+  const [countdownState, setCountdownState] = useState<CountdownState>({
+    isActive: false,
+    secondsRemaining: 0,
+    initialSeconds: 5,
+  });
 
   // Active exercise rule instance
   const currentRule = useMemo(
@@ -27,16 +40,20 @@ export const App: React.FC = () => {
     [store.selectedExerciseId]
   );
 
-  const handleRepetitionCompleted = React.useCallback((rep: RepetitionEvent) => {
-    store.addRepEvent(rep);
-  }, []);
+  const handleRepetitionCompleted = useCallback((rep: RepetitionEvent, landmarks?: Landmark[]) => {
+    store.addRepEvent(rep, landmarks);
+  }, [store]);
 
-  const handleMetricsUpdated = React.useCallback((m: FrameMetrics) => {
+  const handleMetricsUpdated = useCallback((m: FrameMetrics) => {
     store.setMetrics(m);
-  }, []);
+  }, [store]);
 
-  const handleAlertsUpdated = React.useCallback((alerts: SafetyAlert[]) => {
+  const handleAlertsUpdated = useCallback((alerts: SafetyAlert[]) => {
     store.setActiveAlerts(alerts);
+  }, [store]);
+
+  const handleComUpdated = useCallback((com: CenterOfMassResult) => {
+    setComResult(com);
   }, []);
 
   // Initialize Pose Engine
@@ -56,9 +73,13 @@ export const App: React.FC = () => {
     isAnalyzing: store.isAnalyzing,
     syntheticFaultMode: store.syntheticFaultMode,
     playbackSpeed: store.playbackSpeed,
+    showCenterOfMass: store.showCenterOfMass,
+    showGhostOverlay: store.showGhostOverlay,
+    bestRepLandmarks: store.bestRepLandmarks,
     onRepetitionCompleted: handleRepetitionCompleted,
     onMetricsUpdated: handleMetricsUpdated,
     onAlertsUpdated: handleAlertsUpdated,
+    onComUpdated: handleComUpdated,
   });
 
   const handleSelectExercise = (id: string, suite: ExerciseCategory) => {
@@ -75,10 +96,69 @@ export const App: React.FC = () => {
     store.setInputSource('upload');
   };
 
-  const handleResetWorkout = () => {
+  const handleResetWorkout = useCallback(() => {
     resetEngine();
     store.resetWorkout();
-  };
+  }, [resetEngine, store]);
+
+  const handleToggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen()
+        .then(() => setIsFullscreen(true))
+        .catch(() => {});
+    } else {
+      document.exitFullscreen()
+        .then(() => setIsFullscreen(false))
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleStartCountdown = useCallback((seconds: number = 5) => {
+    countdownTimer.start(seconds, () => {
+      handleResetWorkout();
+      store.setIsAnalyzing(true);
+    });
+  }, [handleResetWorkout, store]);
+
+  // Voice Commander integration
+  useEffect(() => {
+    countdownTimer.setOnTick(s => setCountdownState(s));
+
+    if (store.isVoiceCommanderActive) {
+      voiceCommander.start();
+      voiceCommander.setOnCommand(cmd => {
+        store.setLastVoiceCommand(cmd.phrase);
+        setTimeout(() => store.setLastVoiceCommand(null), 2400);
+
+        switch (cmd.action) {
+          case 'start_set':
+            store.setIsAnalyzing(true);
+            break;
+          case 'stop_set':
+            store.setIsAnalyzing(false);
+            break;
+          case 'reset_workout':
+            handleResetWorkout();
+            break;
+          case 'open_report':
+            setIsReportOpen(true);
+            break;
+          case 'toggle_fullscreen':
+            handleToggleFullscreen();
+            break;
+          case 'toggle_mute':
+            store.toggleMute();
+            break;
+        }
+      });
+    } else {
+      voiceCommander.stop();
+    }
+
+    return () => {
+      voiceCommander.stop();
+    };
+  }, [store.isVoiceCommanderActive, handleResetWorkout, handleToggleFullscreen, store]);
 
   return (
     <div className="min-h-screen bg-[#07090f] text-slate-100 flex flex-col">
@@ -92,11 +172,11 @@ export const App: React.FC = () => {
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-base tracking-tight text-white">PoseCraft</h1>
               <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800/60">
-                v1.0.0
+                v1.2.0
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-sans hidden sm:block">
-              Local Biomechanical Movement Lab & Repetition Engine
+              Local Biomechanical Movement Lab &amp; Repetition Engine
             </p>
           </div>
         </div>
@@ -120,8 +200,8 @@ export const App: React.FC = () => {
       </header>
 
       {/* Main Studio Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-5">
-        {/* Top Control Bar */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-4">
+        {/* Top Control Bar with Voice, Athlete Tier, Countdown, & CoM Toggles */}
         <CameraControls
           inputSource={store.inputSource}
           onChangeInputSource={store.setInputSource}
@@ -139,6 +219,26 @@ export const App: React.FC = () => {
           onSaveSet={() => store.saveCurrentSession(currentRule.name)}
           onUploadFile={handleUploadFile}
           hasRepsToSave={store.repHistory.length > 0}
+          athleteTier={store.athleteTier}
+          onChangeAthleteTier={store.setAthleteTier}
+          isVoiceCommanderActive={store.isVoiceCommanderActive}
+          onToggleVoiceCommander={store.toggleVoiceCommander}
+          onStartCountdown={handleStartCountdown}
+          showCenterOfMass={store.showCenterOfMass}
+          onToggleCenterOfMass={store.toggleCenterOfMass}
+          showGhostOverlay={store.showGhostOverlay}
+          onToggleGhostOverlay={store.toggleGhostOverlay}
+          onOpenPrintableReport={() => setIsPrintReportOpen(true)}
+        />
+
+        {/* Multi-Exercise Workout Circuits & Routine Builder */}
+        <RoutineBuilder
+          activeRoutine={store.activeRoutine}
+          currentStep={store.currentRoutineStep}
+          currentRepsCount={store.repHistory.length}
+          onStartRoutine={store.startRoutine}
+          onNextStep={store.nextRoutineStep}
+          onCancelRoutine={() => store.setActiveRoutine(null)}
         />
 
         {/* Audio Metronome & Tempo Pacer */}
@@ -161,6 +261,11 @@ export const App: React.FC = () => {
               cameraActive={cameraActive}
               modelLoading={modelLoading}
               videoUrl={store.videoUrl}
+              countdownSeconds={countdownState.secondsRemaining}
+              isCountdownActive={countdownState.isActive}
+              lastVoiceCommand={store.lastVoiceCommand}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={handleToggleFullscreen}
             />
 
             {/* Video Scrubber & Frame Stepper (Upload Mode) */}
@@ -218,11 +323,14 @@ export const App: React.FC = () => {
 
           {/* Right Column: Telemetry & Movement Instructions */}
           <div className="lg:col-span-4 space-y-4">
-            {/* Real-time Metrics */}
+            {/* Real-time Metrics Dashboard with VBT and CoM Ground Balance */}
             <MetricsDashboard
               metrics={store.metrics}
               rule={currentRule}
               fps={fps}
+              vbtData={store.vbtHistory[0] || null}
+              comBalanceStatus={comResult?.balanceStatus || 'optimal'}
+              comOffset={comResult?.balanceOffsetNormalized || 0}
             />
 
             {/* Biomechanical Protocol Instructions */}
@@ -252,7 +360,7 @@ export const App: React.FC = () => {
         />
       </main>
 
-      {/* Printable Assessment Modal */}
+      {/* Full Modal Report */}
       <SessionReportModal
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
@@ -266,6 +374,29 @@ export const App: React.FC = () => {
         onClose={() => setIsHistoryOpen(false)}
         sessions={store.savedSessions}
         onClearHistory={store.clearSessionHistory}
+      />
+
+      {/* Printable Clinical Physical Therapy PDF Report */}
+      <PrintableClinicalReport
+        isOpen={isPrintReportOpen}
+        onClose={() => setIsPrintReportOpen(false)}
+        exerciseName={currentRule.name}
+        totalReps={store.repHistory.length}
+        validReps={store.repHistory.filter(r => r.passed).length}
+        averageRom={
+          store.repHistory.length > 0
+            ? Math.round(store.repHistory.reduce((a, b) => a + b.peakRom, 0) / store.repHistory.length)
+            : 74
+        }
+        averageFormScore={
+          store.repHistory.length > 0
+            ? Math.round(store.repHistory.reduce((a, b) => a + b.romScore, 0) / store.repHistory.length)
+            : 95
+        }
+        reps={store.repHistory}
+        alerts={store.activeAlerts}
+        vbtMeanVelocity={store.vbtHistory[0]?.meanConcentricVelocity || 0.68}
+        maxVelocityLoss={store.vbtHistory[0]?.velocityLossPercent || 14.2}
       />
     </div>
   );

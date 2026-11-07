@@ -12,7 +12,13 @@ import {
   MicOff,
   History,
   BookmarkCheck,
+  Timer,
+  Compass,
+  Ghost,
+  Printer,
+  Radio,
 } from 'lucide-react';
+import { AthleteLevelTier, ATHLETE_PROFILES } from '../../engine/athlete_level';
 
 interface CameraControlsProps {
   inputSource: 'synthetic' | 'webcam' | 'upload';
@@ -31,6 +37,16 @@ interface CameraControlsProps {
   onSaveSet: () => void;
   onUploadFile: (file: File) => void;
   hasRepsToSave: boolean;
+  athleteTier: AthleteLevelTier;
+  onChangeAthleteTier: (tier: AthleteLevelTier) => void;
+  isVoiceCommanderActive: boolean;
+  onToggleVoiceCommander: () => void;
+  onStartCountdown: (seconds: number) => void;
+  showCenterOfMass: boolean;
+  onToggleCenterOfMass: () => void;
+  showGhostOverlay: boolean;
+  onToggleGhostOverlay: () => void;
+  onOpenPrintableReport: () => void;
 }
 
 export const CameraControls: React.FC<CameraControlsProps> = ({
@@ -50,6 +66,16 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   onSaveSet,
   onUploadFile,
   hasRepsToSave,
+  athleteTier,
+  onChangeAthleteTier,
+  isVoiceCommanderActive,
+  onToggleVoiceCommander,
+  onStartCountdown,
+  showCenterOfMass,
+  onToggleCenterOfMass,
+  showGhostOverlay,
+  onToggleGhostOverlay,
+  onOpenPrintableReport,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -62,91 +88,175 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
 
   return (
     <div className="bg-[#0e131f] border border-slate-800 rounded-xl p-3 shadow-xl flex flex-wrap items-center justify-between gap-3">
-      {/* Input Source Selector */}
-      <div className="flex items-center gap-1 bg-[#141b2d] p-1 rounded-lg border border-slate-800">
-        <button
-          onClick={() => onChangeInputSource('synthetic')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-            inputSource === 'synthetic'
-              ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Kinematic Sim</span>
-        </button>
+      {/* 1. Input Source & Athlete Level Tier */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1 bg-[#141b2d] p-1 rounded-lg border border-slate-800">
+          <button
+            onClick={() => onChangeInputSource('synthetic')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              inputSource === 'synthetic'
+                ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Kinematic Sim</span>
+          </button>
 
-        <button
-          onClick={() => onChangeInputSource('webcam')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-            inputSource === 'webcam'
-              ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Camera className="w-3.5 h-3.5" />
-          <span>Live Camera</span>
-        </button>
+          <button
+            onClick={() => onChangeInputSource('webcam')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              inputSource === 'webcam'
+                ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>Live Camera</span>
+          </button>
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-            inputSource === 'upload'
-              ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <FileVideo className="w-3.5 h-3.5" />
-          <span>Upload Video</span>
-        </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              inputSource === 'upload'
+                ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FileVideo className="w-3.5 h-3.5" />
+            <span>Upload Video</span>
+          </button>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="video/mp4,video/webm,video/quicktime"
-          onChange={handleFileChange}
-          className="hidden"
-        />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </div>
+
+        {/* Athlete Experience Tier Selector */}
+        <select
+          value={athleteTier}
+          onChange={e => onChangeAthleteTier(e.target.value as AthleteLevelTier)}
+          className="bg-[#141b2d] border border-slate-700/60 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+          title="Athlete Biomechanical Tolerance Tier"
+        >
+          {Object.values(ATHLETE_PROFILES).map(p => (
+            <option key={p.id} value={p.id}>
+              Tier: {p.badge} ({p.title.split(' ')[0]})
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Simulator Controls (Active when in Synthetic mode) */}
-      {inputSource === 'synthetic' && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Speed Selector */}
-          <div className="flex items-center gap-1 bg-[#141b2d] px-2 py-1 rounded-lg border border-slate-800 text-xs font-mono">
-            <Play className="w-3 h-3 text-slate-400" />
-            {[0.5, 1.0, 1.5].map(spd => (
-              <button
-                key={spd}
-                onClick={() => onChangeSpeed(spd)}
-                className={`px-1.5 py-0.5 rounded ${
-                  playbackSpeed === spd
-                    ? 'bg-cyan-500/20 text-cyan-300 font-bold'
-                    : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                {spd}x
-              </button>
-            ))}
-          </div>
-
-          {/* Fault Mode Selector */}
-          <select
-            value={syntheticFaultMode}
-            onChange={e => onChangeFaultMode(e.target.value as 'none' | 'valgus' | 'rounding' | 'kipping' | 'sag')}
-            className="w-full sm:w-auto max-w-[260px] bg-[#141b2d] border border-slate-700/60 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
-          >
-            <option value="none">Form: Clean Technique</option>
-            <option value="valgus">Inject: Knee Valgus Collapse</option>
-            <option value="rounding">Inject: Lumbar Spine Rounding</option>
-            <option value="kipping">Inject: Kipping Knee Swing</option>
-            <option value="sag">Inject: Hip Sagging / Pike</option>
-          </select>
-        </div>
-      )}
-
-      {/* Action Buttons */}
+      {/* 2. Simulator & Kinematic Overlays */}
       <div className="flex items-center gap-2 flex-wrap">
+        {inputSource === 'synthetic' && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Speed Selector */}
+            <div className="flex items-center gap-1 bg-[#141b2d] px-2 py-1 rounded-lg border border-slate-800 text-xs font-mono">
+              <Play className="w-3 h-3 text-slate-400" />
+              {[0.5, 1.0, 1.5].map(spd => (
+                <button
+                  key={spd}
+                  onClick={() => onChangeSpeed(spd)}
+                  className={`px-1.5 py-0.5 rounded ${
+                    playbackSpeed === spd
+                      ? 'bg-cyan-500/20 text-cyan-300 font-bold'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {spd}x
+                </button>
+              ))}
+            </div>
+
+            {/* Fault Mode Selector */}
+            <select
+              value={syntheticFaultMode}
+              onChange={e => onChangeFaultMode(e.target.value as 'none' | 'valgus' | 'rounding' | 'kipping' | 'sag')}
+              className="w-full sm:w-auto max-w-[240px] bg-[#141b2d] border border-slate-700/60 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+            >
+              <option value="none">Form: Clean Technique</option>
+              <option value="valgus">Inject: Knee Valgus Collapse</option>
+              <option value="rounding">Inject: Lumbar Spine Rounding</option>
+              <option value="kipping">Inject: Kipping Knee Swing</option>
+              <option value="sag">Inject: Hip Sagging / Pike</option>
+            </select>
+          </div>
+        )}
+
+        {/* Pre-Set Countdown Button */}
+        <button
+          onClick={() => onStartCountdown(5)}
+          title="Trigger 5-Second Hands-Free Countdown"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#141b2d] border border-slate-700 hover:border-cyan-500 text-slate-300 hover:text-cyan-300 text-xs font-medium transition-all"
+        >
+          <Timer className="w-3.5 h-3.5 text-cyan-400" />
+          <span>5s Count</span>
+        </button>
+
+        {/* Center of Mass (CoM) Toggle */}
+        <button
+          onClick={onToggleCenterOfMass}
+          title="Toggle Dempster Center of Mass Reticle & Ground Projection"
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+            showCenterOfMass
+              ? 'bg-cyan-950/60 text-cyan-300 border-cyan-700/80'
+              : 'bg-slate-900 text-slate-500 border-slate-800'
+          }`}
+        >
+          <Compass className="w-3.5 h-3.5" />
+          <span>CoM</span>
+        </button>
+
+        {/* Ghost Overlay Toggle */}
+        <button
+          onClick={onToggleGhostOverlay}
+          title="Toggle Ghost Mode (Overlay of best repetition trajectory)"
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+            showGhostOverlay
+              ? 'bg-purple-950/60 text-purple-300 border-purple-700/80 shadow-sm'
+              : 'bg-slate-900 text-slate-500 border-slate-800'
+          }`}
+        >
+          <Ghost className="w-3.5 h-3.5" />
+          <span>Ghost</span>
+        </button>
+      </div>
+
+      {/* 3. Action Buttons & Voice Controls */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Hands-Free Voice Commander */}
+        <button
+          onClick={onToggleVoiceCommander}
+          title={isVoiceCommanderActive ? 'Voice Commander Active (Listening...)' : 'Enable Voice Commander'}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+            isVoiceCommanderActive
+              ? 'bg-rose-950/70 border-rose-500 text-rose-300 animate-pulse'
+              : 'bg-[#141b2d] border-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Radio className="w-3.5 h-3.5 text-rose-400" />
+          <span>{isVoiceCommanderActive ? 'Voice ON' : 'Voice'}</span>
+        </button>
+
+        {/* Voice Coach Audio Toggle */}
+        <button
+          onClick={onToggleVoiceCoach}
+          title={isVoiceCoachEnabled ? 'Voice Coach Active (Click to Mute Voice)' : 'Voice Coach Muted (Click to Enable)'}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+            isVoiceCoachEnabled
+              ? 'bg-cyan-950/60 text-cyan-300 border-cyan-700/80'
+              : 'bg-slate-800 text-slate-500 border-slate-700'
+          }`}
+        >
+          {isVoiceCoachEnabled ? <Mic className="w-3.5 h-3.5 text-cyan-400" /> : <MicOff className="w-3.5 h-3.5" />}
+          <span className="hidden sm:inline">Coach</span>
+        </button>
+
         {/* Audio Mute Toggle */}
         <button
           onClick={onToggleMute}
@@ -160,50 +270,46 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
 
-        {/* Voice Coach Toggle */}
-        <button
-          onClick={onToggleVoiceCoach}
-          title={isVoiceCoachEnabled ? 'Voice Coach Active (Click to Mute Voice)' : 'Voice Coach Muted (Click to Enable)'}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-            isVoiceCoachEnabled
-              ? 'bg-cyan-950/60 text-cyan-300 border-cyan-700/80'
-              : 'bg-slate-800 text-slate-500 border-slate-700'
-          }`}
-        >
-          {isVoiceCoachEnabled ? <Mic className="w-3.5 h-3.5 text-cyan-400" /> : <MicOff className="w-3.5 h-3.5" />}
-          <span className="hidden sm:inline">Voice Coach</span>
-        </button>
-
-        {/* Save Current Set to History */}
+        {/* Save Set */}
         {hasRepsToSave && (
           <button
             onClick={onSaveSet}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/50 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/40 text-xs font-semibold shadow-sm transition-all"
           >
             <BookmarkCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Save Set</span>
+            <span>Save</span>
           </button>
         )}
 
-        {/* Session History Modal */}
+        {/* History Modal */}
         <button
           onClick={onOpenHistory}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-medium transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-medium transition-all"
         >
           <History className="w-3.5 h-3.5 text-cyan-400" />
           <span>History</span>
         </button>
 
-        {/* Reset Set */}
+        {/* Reset */}
         <button
           onClick={onReset}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-medium transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-medium transition-all"
         >
           <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
           <span>Reset</span>
         </button>
 
-        {/* Generate Report */}
+        {/* Clinical PDF Print Report */}
+        <button
+          onClick={onOpenPrintableReport}
+          title="Printable Physical Therapy Clinical Report"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-medium transition-all"
+        >
+          <Printer className="w-3.5 h-3.5 text-purple-400" />
+          <span className="hidden sm:inline">PDF</span>
+        </button>
+
+        {/* Full Modal Report */}
         <button
           onClick={onOpenReport}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold text-xs shadow-md hover:from-cyan-500 hover:to-blue-500 transition-all"
