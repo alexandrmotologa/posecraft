@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useWorkoutStore } from './store/useWorkoutStore';
 import { usePoseEngine } from './hooks/usePoseEngine';
 import { createExerciseRule } from './exercises/registry';
-import { ExerciseCategory } from './engine/types';
+import { ExerciseCategory, FrameMetrics, RepetitionEvent, SafetyAlert } from './engine/types';
 import { VideoCanvas } from './components/canvas/VideoCanvas';
 import { CameraControls } from './components/studio/CameraControls';
 import { ExerciseSelector } from './components/studio/ExerciseSelector';
@@ -27,6 +27,18 @@ export const App: React.FC = () => {
     [store.selectedExerciseId]
   );
 
+  const handleRepetitionCompleted = React.useCallback((rep: RepetitionEvent) => {
+    store.addRepEvent(rep);
+  }, []);
+
+  const handleMetricsUpdated = React.useCallback((m: FrameMetrics) => {
+    store.setMetrics(m);
+  }, []);
+
+  const handleAlertsUpdated = React.useCallback((alerts: SafetyAlert[]) => {
+    store.setActiveAlerts(alerts);
+  }, []);
+
   // Initialize Pose Engine
   const {
     videoRef,
@@ -44,15 +56,9 @@ export const App: React.FC = () => {
     isAnalyzing: store.isAnalyzing,
     syntheticFaultMode: store.syntheticFaultMode,
     playbackSpeed: store.playbackSpeed,
-    onRepetitionCompleted: rep => {
-      store.addRepEvent(rep);
-    },
-    onMetricsUpdated: m => {
-      store.setMetrics(m);
-    },
-    onAlertsUpdated: alerts => {
-      store.setActiveAlerts(alerts);
-    },
+    onRepetitionCompleted: handleRepetitionCompleted,
+    onMetricsUpdated: handleMetricsUpdated,
+    onAlertsUpdated: handleAlertsUpdated,
   });
 
   const handleSelectExercise = (id: string, suite: ExerciseCategory) => {

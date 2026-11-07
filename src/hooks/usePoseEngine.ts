@@ -47,6 +47,20 @@ export function usePoseEngine({
   const pathTracerRef = useRef<PathTracer>(new PathTracer(80));
   const protractorRef = useRef<CustomProtractor>(new CustomProtractor());
 
+  // Persistent animation and callback refs to prevent effect recreation on render
+  const syntheticProgressRef = useRef<number>(0);
+  const lastRepCountRef = useRef<number>(0);
+  const lastRepTimeRef = useRef<number>(performance.now());
+
+  const onRepetitionCompletedRef = useRef(onRepetitionCompleted);
+  onRepetitionCompletedRef.current = onRepetitionCompleted;
+
+  const onMetricsUpdatedRef = useRef(onMetricsUpdated);
+  onMetricsUpdatedRef.current = onMetricsUpdated;
+
+  const onAlertsUpdatedRef = useRef(onAlertsUpdated);
+  onAlertsUpdatedRef.current = onAlertsUpdated;
+
   const [fps, setFps] = useState<number>(60);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [modelLoading, setModelLoading] = useState<boolean>(false);
@@ -55,6 +69,8 @@ export function usePoseEngine({
   // Switch exercise rule on ID change
   useEffect(() => {
     ruleRef.current = createExerciseRule(exerciseId);
+    syntheticProgressRef.current = 0;
+    lastRepCountRef.current = 0;
     pathTracerRef.current.clear();
     kalmanRef.current.reset();
   }, [exerciseId]);
@@ -154,9 +170,6 @@ export function usePoseEngine({
     let lastFrameTime = performance.now();
     let frameCount = 0;
     let lastFpsUpdate = performance.now();
-    let syntheticProgress = 0;
-    let lastRepCount = 0;
-    let lastRepTime = performance.now();
 
     const loop = (currentTime: number) => {
       const rawDeltaMs = currentTime - lastFrameTime;
@@ -187,11 +200,11 @@ export function usePoseEngine({
         if (inputSource === 'synthetic') {
           // Advance synthetic movement waveform smoothly: ~2.8s per realistic repetition cycle
           const cycleRate = 0.00038 * playbackSpeed * deltaMs;
-          syntheticProgress = (syntheticProgress + cycleRate) % 1.0;
+          syntheticProgressRef.current = (syntheticProgressRef.current + cycleRate) % 1.0;
 
           skeleton = generateKinematicSkeleton(
             exerciseId,
-            syntheticProgress,
+            syntheticProgressRef.current,
             currentTime,
             syntheticFaultMode
           );
@@ -218,28 +231,28 @@ export function usePoseEngine({
           const baseline = rule.calibrate(smoothedSkeleton);
           const metrics = rule.evaluateFrame(smoothedSkeleton, baseline, currentTime);
 
-          onMetricsUpdated(metrics);
-          onAlertsUpdated(metrics.activeAlerts);
+          onMetricsUpdatedRef.current(metrics);
+          onAlertsUpdatedRef.current(metrics.activeAlerts);
 
           // Check if repetition completed
-          if (metrics.repCount > lastRepCount) {
-            lastRepCount = metrics.repCount;
+          if (metrics.repCount > lastRepCountRef.current) {
+            lastRepCountRef.current = metrics.repCount;
 
             // Fetch true repetition telemetry calculated by the dual-threshold hysteresis engine
             const stateMachineInstance = (rule as unknown as { stateMachine?: { getLastRepetition?: () => RepetitionEvent | null } }).stateMachine;
             const measuredRep = rule.getLastRepetition?.() || stateMachineInstance?.getLastRepetition?.() || metrics.completedRep;
 
             if (measuredRep) {
-              onRepetitionCompleted(measuredRep);
+              onRepetitionCompletedRef.current(measuredRep);
               audioEngine.playRepDing();
               voiceCoach.speakRep(measuredRep.repNumber);
             } else {
-              const repDuration = Math.max(600, currentTime - lastRepTime);
-              lastRepTime = currentTime;
+              const repDuration = Math.max(600, currentTime - lastRepTimeRef.current);
+              lastRepTimeRef.current = currentTime;
               const concentric = Math.round(repDuration * 0.52);
               const eccentric = repDuration - concentric;
 
-              onRepetitionCompleted({
+              onRepetitionCompletedRef.current({
                 repNumber: metrics.repCount,
                 startTimeMs: currentTime - repDuration,
                 peakTimeMs: currentTime - eccentric,
@@ -352,12 +365,11 @@ export function usePoseEngine({
     isAnalyzing,
     syntheticFaultMode,
     playbackSpeed,
-    onRepetitionCompleted,
-    onMetricsUpdated,
-    onAlertsUpdated,
   ]);
 
   const resetEngine = useCallback(() => {
+    syntheticProgressRef.current = 0;
+    lastRepCountRef.current = 0;
     ruleRef.current.reset();
     kalmanRef.current.reset();
     pathTracerRef.current.clear();
