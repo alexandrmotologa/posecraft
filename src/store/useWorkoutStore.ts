@@ -12,6 +12,8 @@ import { vbtEngine, VbtRepetitionData } from '../engine/vbt';
 import { AthleteLevelTier } from '../engine/athlete_level';
 import { WorkoutRoutine } from '../engine/routine';
 import { SavedWorkoutSession } from '../components/export/SessionHistoryModal';
+import { sonificationEngine } from '../engine/sonification';
+import { voiceCommander, VoiceLanguage } from '../engine/voice_commander';
 
 const STORAGE_KEY = 'posecraft_saved_sessions_v1';
 
@@ -41,6 +43,16 @@ export function useWorkoutStore() {
   const [lastVoiceCommand, setLastVoiceCommand] = useState<string | null>(null);
   const [activeRoutine, setActiveRoutine] = useState<WorkoutRoutine | null>(null);
   const [currentRoutineStep, setCurrentRoutineStep] = useState<number>(0);
+
+  // Advanced V2 Modules State
+  const [isOrbit3DOpen, setIsOrbit3DOpen] = useState<boolean>(false);
+  const [worldLandmarks, setWorldLandmarks] = useState<Landmark[] | undefined>(undefined);
+  const [isSonificationEnabled, setIsSonificationEnabled] = useState<boolean>(false);
+  const [isCustomStudioOpen, setIsCustomStudioOpen] = useState<boolean>(false);
+  const [isDualViewOpen, setIsDualViewOpen] = useState<boolean>(false);
+  const [voiceLanguage, setVoiceLanguageState] = useState<VoiceLanguage>('en-US');
+  const [currentLoadKg, setCurrentLoadKgState] = useState<number>(0);
+  const [useVelocityHeatmap, setUseVelocityHeatmap] = useState<boolean>(true);
 
   // Load saved sessions on mount
   useEffect(() => {
@@ -177,6 +189,28 @@ export function useWorkoutStore() {
     }
   }, [activeRoutine, currentRoutineStep, resetWorkout]);
 
+  const toggleOrbit3D = useCallback(() => {
+    setIsOrbit3DOpen((prev) => !prev);
+  }, []);
+
+  const toggleSonification = useCallback(() => {
+    setIsSonificationEnabled((prev) => {
+      const next = !prev;
+      sonificationEngine.setEnabled(next);
+      return next;
+    });
+  }, []);
+
+  const setVoiceLanguage = useCallback((lang: VoiceLanguage) => {
+    setVoiceLanguageState(lang);
+    voiceCommander.setLanguage(lang);
+  }, []);
+
+  const setCurrentLoadKg = useCallback((kg: number) => {
+    setCurrentLoadKgState(kg);
+    vbtEngine.setCurrentLoad(kg);
+  }, []);
+
   return {
     selectedExerciseId,
     setSelectedExerciseId,
@@ -229,5 +263,22 @@ export function useWorkoutStore() {
     currentRoutineStep,
     startRoutine,
     nextRoutineStep,
+    isOrbit3DOpen,
+    setIsOrbit3DOpen,
+    toggleOrbit3D,
+    worldLandmarks,
+    setWorldLandmarks,
+    isSonificationEnabled,
+    toggleSonification,
+    isCustomStudioOpen,
+    setIsCustomStudioOpen,
+    isDualViewOpen,
+    setIsDualViewOpen,
+    voiceLanguage,
+    setVoiceLanguage,
+    currentLoadKg,
+    setCurrentLoadKg,
+    useVelocityHeatmap,
+    setUseVelocityHeatmap,
   };
 }

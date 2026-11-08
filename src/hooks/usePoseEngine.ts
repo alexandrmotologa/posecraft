@@ -18,6 +18,7 @@ import { CustomProtractor } from '../components/canvas/CustomProtractor';
 import { audioEngine } from '../engine/audio';
 import { voiceCoach } from '../engine/voice_coach';
 import { centerOfMassEngine, CenterOfMassResult } from '../engine/com';
+import { sonificationEngine } from '../engine/sonification';
 
 function renderGhostOverlay(
   ctx: CanvasRenderingContext2D,
@@ -69,10 +70,12 @@ export interface UsePoseEngineProps {
   showCenterOfMass?: boolean;
   showGhostOverlay?: boolean;
   bestRepLandmarks?: Landmark[] | null;
+  useVelocityHeatmap?: boolean;
   onRepetitionCompleted: (event: RepetitionEvent, landmarks?: Landmark[]) => void;
   onMetricsUpdated: (metrics: FrameMetrics) => void;
   onAlertsUpdated: (alerts: SafetyAlert[]) => void;
   onComUpdated?: (com: CenterOfMassResult) => void;
+  onWorldLandmarksUpdated?: (worldLandmarks?: Landmark[]) => void;
 }
 
 export function usePoseEngine({
@@ -84,10 +87,12 @@ export function usePoseEngine({
   showCenterOfMass = true,
   showGhostOverlay = false,
   bestRepLandmarks = null,
+  useVelocityHeatmap = true,
   onRepetitionCompleted,
   onMetricsUpdated,
   onAlertsUpdated,
   onComUpdated,
+  onWorldLandmarksUpdated,
 }: UsePoseEngineProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -123,6 +128,12 @@ export function usePoseEngine({
 
   const bestRepLandmarksRef = useRef(bestRepLandmarks);
   bestRepLandmarksRef.current = bestRepLandmarks;
+
+  const useVelocityHeatmapRef = useRef(useVelocityHeatmap);
+  useVelocityHeatmapRef.current = useVelocityHeatmap;
+
+  const onWorldLandmarksUpdatedRef = useRef(onWorldLandmarksUpdated);
+  onWorldLandmarksUpdatedRef.current = onWorldLandmarksUpdated;
 
   const [fps, setFps] = useState<number>(60);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
@@ -290,6 +301,10 @@ export function usePoseEngine({
             landmarks: filteredLandmarks,
           };
 
+          if (skeleton.worldLandmarks) {
+            onWorldLandmarksUpdatedRef.current?.(skeleton.worldLandmarks);
+          }
+
           const rule = ruleRef.current;
           const baseline = rule.calibrate(smoothedSkeleton);
           const metrics = rule.evaluateFrame(smoothedSkeleton, baseline, currentTime);
@@ -418,8 +433,25 @@ export function usePoseEngine({
 
           if (trackPoint) {
             pathTracerRef.current.addPoint({ x: trackPoint.x, y: trackPoint.y }, currentTime);
-            pathTracerRef.current.render(ctx, width, height, '#ec4899', isBarbellExercise);
+            pathTracerRef.current.render(
+              ctx,
+              width,
+              height,
+              '#ec4899',
+              isBarbellExercise,
+              useVelocityHeatmapRef.current
+            );
           }
+
+          // Real-time acoustic biofeedback sonification
+          const isConcentric = metrics.repState === 'CONCENTRIC';
+          const sticking = pathTracerRef.current.getStickingPoint();
+          const estimatedVel = isConcentric ? (sticking?.velocity || 0.72) : 0;
+          sonificationEngine.updateKinematics(
+            estimatedVel,
+            isConcentric,
+            metrics.activeAlerts.length > 0
+          );
 
           // Render interactive protractor if active
           if (protractorRef.current.isActive) {

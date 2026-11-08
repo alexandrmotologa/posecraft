@@ -116,7 +116,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           </span>
           <span className="text-[10px] font-mono text-slate-500">m/s</span>
         </div>
-        <div className="text-3xl font-extrabold font-mono text-slate-100 tracking-tight flex items-baseline gap-2">
+        <div className="text-3xl font-extrabold font-mono text-slate-100 tracking-tight flex items-baseline gap-2 flex-wrap">
           <span>{vbtData ? vbtData.meanConcentricVelocity : '0.65'}</span>
           <span className="text-xs font-normal text-slate-400">m/s</span>
           {vbtData && vbtData.velocityLossPercent > 0 && (
@@ -128,9 +128,17 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
               -{vbtData.velocityLossPercent}% drop
             </span>
           )}
+          {vbtData && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/80 text-indigo-300">
+              RPE {vbtData.estimatedRpe} ({vbtData.repsInReserve} RIR)
+            </span>
+          )}
         </div>
-        <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
-          {vbtData ? vbtData.zone.replace(/_/g, ' ').toUpperCase() : 'OPTIMAL HYPERTROPHY ZONE'}
+        <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex justify-between items-center truncate">
+          <span>{vbtData ? vbtData.zone.replace(/_/g, ' ').toUpperCase() : 'OPTIMAL HYPERTROPHY ZONE'}</span>
+          {vbtData?.estimated1RmKg && (
+            <span className="text-emerald-400 font-bold">1RM: {vbtData.estimated1RmKg} kg</span>
+          )}
         </div>
       </div>
 

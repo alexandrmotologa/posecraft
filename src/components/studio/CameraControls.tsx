@@ -17,8 +17,14 @@ import {
   Ghost,
   Printer,
   Radio,
+  Rotate3d,
+  Waves,
+  Wrench,
+  Columns,
+  Globe,
 } from 'lucide-react';
 import { AthleteLevelTier, ATHLETE_PROFILES } from '../../engine/athlete_level';
+import { VoiceLanguage } from '../../engine/voice_commander';
 
 interface CameraControlsProps {
   inputSource: 'synthetic' | 'webcam' | 'upload';
@@ -47,6 +53,16 @@ interface CameraControlsProps {
   showGhostOverlay: boolean;
   onToggleGhostOverlay: () => void;
   onOpenPrintableReport: () => void;
+  isOrbit3DOpen: boolean;
+  onToggleOrbit3D: () => void;
+  isSonificationEnabled: boolean;
+  onToggleSonification: () => void;
+  onOpenCustomStudio: () => void;
+  onOpenDualView: () => void;
+  voiceLanguage: VoiceLanguage;
+  onChangeVoiceLanguage: (lang: VoiceLanguage) => void;
+  currentLoadKg: number;
+  onChangeLoadKg: (kg: number) => void;
 }
 
 export const CameraControls: React.FC<CameraControlsProps> = ({
@@ -76,6 +92,16 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   showGhostOverlay,
   onToggleGhostOverlay,
   onOpenPrintableReport,
+  isOrbit3DOpen,
+  onToggleOrbit3D,
+  isSonificationEnabled,
+  onToggleSonification,
+  onOpenCustomStudio,
+  onOpenDualView,
+  voiceLanguage,
+  onChangeVoiceLanguage,
+  currentLoadKg,
+  onChangeLoadKg,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -225,10 +251,65 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           <Ghost className="w-3.5 h-3.5" />
           <span>Ghost</span>
         </button>
+
+        {/* 3D Orbit Viewport Toggle */}
+        <button
+          onClick={onToggleOrbit3D}
+          title="Toggle 3D Orbit Skeleton Viewport (Metric 3D coordinates)"
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+            isOrbit3DOpen
+              ? 'bg-cyan-950/70 text-cyan-300 border-cyan-500 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+          }`}
+        >
+          <Rotate3d className="w-3.5 h-3.5" />
+          <span>3D View</span>
+        </button>
+
+        {/* Audio Sonification Biofeedback */}
+        <button
+          onClick={onToggleSonification}
+          title={isSonificationEnabled ? 'Continuous Acoustic Biofeedback ON' : 'Enable Acoustic Biofeedback Sonification'}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+            isSonificationEnabled
+              ? 'bg-amber-950/70 text-amber-300 border-amber-500 shadow-sm'
+              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+          }`}
+        >
+          <Waves className="w-3.5 h-3.5" />
+          <span>Sonify</span>
+        </button>
+
+        {/* Barbell Load Input (kg) */}
+        <div className="flex items-center gap-1 bg-[#141b2d] px-2 py-1 rounded-lg border border-slate-800 text-xs text-slate-300">
+          <span className="text-[11px] text-slate-400">Load:</span>
+          <input
+            type="number"
+            min="0"
+            max="500"
+            step="2.5"
+            placeholder="0"
+            value={currentLoadKg || ''}
+            onChange={(e) => onChangeLoadKg(Number(e.target.value) || 0)}
+            className="w-12 bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-xs text-cyan-300 font-mono text-center focus:outline-none focus:border-cyan-500"
+            title="Barbell or added external load in kg (used for 1RM prediction & power calculation)"
+          />
+          <span className="text-[11px] text-slate-400">kg</span>
+        </div>
       </div>
 
       {/* 3. Action Buttons & Voice Controls */}
       <div className="flex items-center gap-2 flex-wrap">
+        {/* Voice Commander Language Switcher */}
+        <button
+          onClick={() => onChangeVoiceLanguage(voiceLanguage === 'en-US' ? 'ro-RO' : 'en-US')}
+          title="Toggle Voice Command Language (English / Romanian)"
+          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#141b2d] border border-slate-800 text-xs font-mono text-slate-300 hover:text-white"
+        >
+          <Globe className="w-3 h-3 text-cyan-400" />
+          <span>{voiceLanguage === 'en-US' ? 'EN' : 'RO'}</span>
+        </button>
+
         {/* Hands-Free Voice Commander */}
         <button
           onClick={onToggleVoiceCommander}
@@ -297,6 +378,26 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
         >
           <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
           <span>Reset</span>
+        </button>
+
+        {/* Custom Exercise Studio */}
+        <button
+          onClick={onOpenCustomStudio}
+          title="Open Custom Exercise Kinematic Studio (No-Code Rule Builder)"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 text-xs font-medium transition-all"
+        >
+          <Wrench className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Studio</span>
+        </button>
+
+        {/* Dual View Comparison */}
+        <button
+          onClick={onOpenDualView}
+          title="Dual-View Side-by-Side Benchmark Form Comparison"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-indigo-400 hover:text-indigo-300 hover:bg-slate-800 text-xs font-medium transition-all"
+        >
+          <Columns className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Dual</span>
         </button>
 
         {/* Clinical PDF Print Report */}

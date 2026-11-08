@@ -19,6 +19,9 @@ import { RoutineBuilder } from './components/studio/RoutineBuilder';
 import { KinematicChart } from './components/telemetry/KinematicChart';
 import { TempoPacer } from './components/studio/TempoPacer';
 import { VideoScrubber } from './components/studio/VideoScrubber';
+import { Orbit3DView } from './components/canvas/Orbit3DView';
+import { CustomExerciseStudio } from './components/studio/CustomExerciseStudio';
+import { DualViewComparison } from './components/studio/DualViewComparison';
 import { Activity, ShieldCheck, Cpu, Compass } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -76,10 +79,12 @@ export const App: React.FC = () => {
     showCenterOfMass: store.showCenterOfMass,
     showGhostOverlay: store.showGhostOverlay,
     bestRepLandmarks: store.bestRepLandmarks,
+    useVelocityHeatmap: store.useVelocityHeatmap,
     onRepetitionCompleted: handleRepetitionCompleted,
     onMetricsUpdated: handleMetricsUpdated,
     onAlertsUpdated: handleAlertsUpdated,
     onComUpdated: handleComUpdated,
+    onWorldLandmarksUpdated: store.setWorldLandmarks,
   });
 
   const handleSelectExercise = (id: string, suite: ExerciseCategory) => {
@@ -148,6 +153,12 @@ export const App: React.FC = () => {
             break;
           case 'toggle_mute':
             store.toggleMute();
+            break;
+          case 'toggle_orbit3d':
+            store.toggleOrbit3D();
+            break;
+          case 'toggle_sonification':
+            store.toggleSonification();
             break;
         }
       });
@@ -229,6 +240,16 @@ export const App: React.FC = () => {
           showGhostOverlay={store.showGhostOverlay}
           onToggleGhostOverlay={store.toggleGhostOverlay}
           onOpenPrintableReport={() => setIsPrintReportOpen(true)}
+          isOrbit3DOpen={store.isOrbit3DOpen}
+          onToggleOrbit3D={store.toggleOrbit3D}
+          isSonificationEnabled={store.isSonificationEnabled}
+          onToggleSonification={store.toggleSonification}
+          onOpenCustomStudio={() => store.setIsCustomStudioOpen(true)}
+          onOpenDualView={() => store.setIsDualViewOpen(true)}
+          voiceLanguage={store.voiceLanguage}
+          onChangeVoiceLanguage={store.setVoiceLanguage}
+          currentLoadKg={store.currentLoadKg}
+          onChangeLoadKg={store.setCurrentLoadKg}
         />
 
         {/* Multi-Exercise Workout Circuits & Routine Builder */}
@@ -397,6 +418,28 @@ export const App: React.FC = () => {
         alerts={store.activeAlerts}
         vbtMeanVelocity={store.vbtHistory[0]?.meanConcentricVelocity || 0.68}
         maxVelocityLoss={store.vbtHistory[0]?.velocityLossPercent || 14.2}
+      />
+
+      {/* 3D Orbit Skeleton Viewport Overlay */}
+      <Orbit3DView
+        isOpen={store.isOrbit3DOpen}
+        onClose={() => store.setIsOrbit3DOpen(false)}
+        worldLandmarks={store.worldLandmarks}
+      />
+
+      {/* Visual No-Code Custom Exercise Studio */}
+      <CustomExerciseStudio
+        isOpen={store.isCustomStudioOpen}
+        onClose={() => store.setIsCustomStudioOpen(false)}
+        onSelectExercise={handleSelectExercise}
+      />
+
+      {/* Dual-View Side-by-Side Benchmark Form Comparison */}
+      <DualViewComparison
+        isOpen={store.isDualViewOpen}
+        onClose={() => store.setIsDualViewOpen(false)}
+        currentRep={store.repHistory[store.repHistory.length - 1] || null}
+        exerciseName={currentRule.name}
       />
     </div>
   );

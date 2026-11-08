@@ -1,0 +1,22 @@
+{
+  "name": "PoseCraft - Biomechanical Movement Lab",
+  "short_name": "PoseCraft",
+  "description": "On-device biomechanical movement analysis, repetition counter, and velocity-based training lab.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#06b6d4",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/docs/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/docs/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

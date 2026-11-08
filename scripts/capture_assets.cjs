@@ -31,6 +31,21 @@ async function main() {
   await page.goto('http://localhost:3000/', { waitUntil: 'networkidle2' });
   await new Promise(r => setTimeout(r, 4500)); // allow kinematic simulator to complete reps
 
+  // Set Barbell Load (80 kg) for dynamic VBT RPE & 1RM prediction
+  const loadInput = await page.$('input[type="number"]');
+  if (loadInput) {
+    await loadInput.click({ clickCount: 3 });
+    await loadInput.type('80');
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  // Toggle 3D Orbit Skeleton Viewport HUD
+  const orbitBtn = await page.$('button:has(svg.lucide-rotate-3d)');
+  if (orbitBtn) {
+    await orbitBtn.click();
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
   const desktopPath = path.join(outputDir, 'posecraft_desktop_dashboard.png');
   await page.screenshot({ path: desktopPath });
   console.log(`✓ Saved desktop dashboard: ${desktopPath}`);
@@ -98,9 +113,23 @@ async function main() {
     }
   });
 
+  // Set load (80 kg) and enable 3D Orbit view before recording
+  const gifLoadInput = await page.$('input[type="number"]');
+  if (gifLoadInput) {
+    await gifLoadInput.click({ clickCount: 3 });
+    await gifLoadInput.type('80');
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  const gifOrbitBtn = await page.$('button:has(svg.lucide-rotate-3d)');
+  if (gifOrbitBtn) {
+    await gifOrbitBtn.click();
+    await new Promise(r => setTimeout(r, 300));
+  }
+
   await new Promise(r => setTimeout(r, 1000));
 
-  console.log('Recording multi-scene dynamic biomechanical sequence (~12.5 seconds)...');
+  console.log('Recording multi-scene dynamic biomechanical sequence (~14.5 seconds)...');
 
   // Start CDP screencast to capture every composited frame with zero lag or frame-drop
   const client = await page.target().createCDPSession();
@@ -121,40 +150,37 @@ async function main() {
     everyNthFrame: 1,
   });
 
-  // Scene 1: Clean Deep Back Squat Tracking (0s - 3.5s)
-  console.log('  Scene 1: Deep Back Squat execution with bar path ribbon and rep count...');
-  await new Promise(r => setTimeout(r, 3600));
+  // Scene 1: Clean Deep Back Squat Tracking with 3D Orbit HUD & Sticking Point Ribbon (0s - 3.8s)
+  console.log('  Scene 1: Deep Back Squat with 3D Orbit Viewport HUD and velocity sticking points...');
+  await new Promise(r => setTimeout(r, 3800));
 
-  // Scene 2: Inject Knee Valgus Fault and trigger Safety Alert Banner (3.5s - 7.0s)
+  // Scene 2: Inject Knee Valgus Fault and trigger Safety Alert Banner (3.8s - 7.2s)
   console.log('  Scene 2: Injecting Knee Valgus medial collapse and Safety Alert Banner...');
   await page.select('select', 'valgus');
-  await new Promise(r => setTimeout(r, 3500));
-
-  // Scene 3: Reset fault, switch suite to Calisthenics, select Pull-Ups (7.0s - 10.2s)
-  console.log('  Scene 3: Switching suite to Calisthenics and tracking Pull-Ups & Chin-Ups...');
-  await page.select('select', 'none');
-  await page.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    const suiteBtn = buttons.find(b => b.textContent && b.textContent.includes('Calisthenics'));
-    if (suiteBtn) suiteBtn.click();
-  });
-  await new Promise(r => setTimeout(r, 200));
-
-  await page.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    const exerciseBtn = buttons.find(b => b.textContent && b.textContent.toLowerCase().includes('pull-up'));
-    if (exerciseBtn) exerciseBtn.click();
-  });
   await new Promise(r => setTimeout(r, 3400));
 
-  // Scene 4: Open Clinical Movement Assessment Report Modal (10.2s - 13.5s)
-  console.log('  Scene 4: Opening Clinical Movement Assessment Report Modal...');
+  // Scene 3: Open Custom Exercise Studio Modal (7.2s - 10.2s)
+  console.log('  Scene 3: Opening Custom Exercise Kinematic Studio...');
+  await page.select('select', 'none');
+  const studioBtn = await page.$('button:has(svg.lucide-wrench)');
+  if (studioBtn) {
+    await studioBtn.click();
+    await new Promise(r => setTimeout(r, 2800));
+    const closeStudio = await page.$('button:has(svg.lucide-x)');
+    if (closeStudio) {
+      await closeStudio.click();
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+
+  // Scene 4: Open Clinical Movement Assessment Report Modal with TCX Export (10.2s - 13.8s)
+  console.log('  Scene 4: Opening Clinical Movement Assessment Report Modal with TCX Export...');
   await page.evaluate(() => {
     const buttons = Array.from(document.querySelectorAll('button'));
     const btn = buttons.find(b => b.querySelector('svg.lucide-file-spreadsheet'));
     if (btn) btn.click();
   });
-  await new Promise(r => setTimeout(r, 3200));
+  await new Promise(r => setTimeout(r, 3400));
 
   // Stop screencast
   await client.send('Page.stopScreencast');

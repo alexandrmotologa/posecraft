@@ -1,4 +1,5 @@
 import { ExerciseCategory, ExerciseRule } from '../engine/types';
+import { customExerciseManager } from '../engine/custom_exercise';
 
 // Suite 1: Calisthenics & Bodyweight
 import { PullUpsRule } from './calisthenics/pull_ups';
@@ -109,6 +110,12 @@ export const EXERCISE_SUITES: ExerciseSuiteMetadata[] = [
 ];
 
 export function createExerciseRule(id: string): ExerciseRule {
+  // Check if it's a dynamic custom exercise first
+  const customRule = customExerciseManager.createRuleInstance(id);
+  if (customRule) {
+    return customRule;
+  }
+
   switch (id) {
     // Calisthenics
     case 'pull_ups':

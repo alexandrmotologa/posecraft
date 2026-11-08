@@ -223,8 +223,18 @@ export function generateKinematicSkeleton(
     }
   }
 
+  // Generate metric 3D worldLandmarks (in meters, centered at hip midpoint)
+  const worldLandmarks: Landmark[] = landmarks.map((l) => ({
+    x: parseFloat(((l.x - 0.5) * 1.8).toFixed(3)),
+    y: parseFloat(((0.55 - l.y) * 1.8).toFixed(3)),
+    z: parseFloat((l.z * 1.8).toFixed(3)),
+    visibility: l.visibility ?? 0.99,
+    presence: l.presence ?? 0.99,
+  }));
+
   return {
     landmarks,
+    worldLandmarks,
     timestampMs,
   };
 }

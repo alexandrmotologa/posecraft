@@ -1,6 +1,7 @@
 import React from 'react';
 import { ExerciseSummary, RepetitionEvent } from '../../engine/types';
-import { X, Printer, Download, Award, CheckCircle, ShieldAlert } from 'lucide-react';
+import { X, Printer, Download, Award, CheckCircle, ShieldAlert, FileCode } from 'lucide-react';
+import { downloadTcxFile } from '../../engine/tcx_exporter';
 
 interface SessionReportModalProps {
   isOpen: boolean;
@@ -35,6 +36,20 @@ export const SessionReportModal: React.FC<SessionReportModalProps> = ({
     a.download = `posecraft_report_${summary.exerciseId}_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportTcx = () => {
+    downloadTcxFile({
+      id: `session_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      exerciseId: summary.exerciseId,
+      exerciseName: summary.exerciseName,
+      totalReps: summary.totalReps,
+      validReps: summary.validReps,
+      averageRom: summary.averageRom,
+      averageFormScore: summary.averageFormScore,
+      reps: repHistory,
+    });
   };
 
   const complianceRate =
@@ -179,7 +194,16 @@ export const SessionReportModal: React.FC<SessionReportModalProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-xs font-medium transition-colors"
           >
             <Download className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Export Raw JSON</span>
+            <span>Export JSON</span>
+          </button>
+
+          <button
+            onClick={handleExportTcx}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-orange-400 hover:text-orange-300 text-xs font-medium transition-colors"
+            title="Export Strava & Garmin Training Center XML"
+          >
+            <FileCode className="w-3.5 h-3.5" />
+            <span>Garmin .TCX</span>
           </button>
 
           <button

@@ -14,7 +14,8 @@
   <img src="https://img.shields.io/badge/Pose%20Model-MediaPipe%2033%20Joints-0284c7?style=flat-square" alt="MediaPipe" />
   <img src="https://img.shields.io/badge/Frontend-React%2019%20%2B%20TypeScript-3b82f6?style=flat-square" alt="React 19" />
   <img src="https://img.shields.io/badge/Privacy-Zero%20Cloud%20Uploads-10b981?style=flat-square" alt="Zero Cloud Uploads" />
-  <img src="https://img.shields.io/badge/Tests-65%20Passing-emerald?style=flat-square" alt="Tests 65 Passing" />
+  <img src="https://img.shields.io/badge/Tests-78%20Passing-emerald?style=flat-square" alt="Tests 78 Passing" />
+  <img src="https://img.shields.io/badge/PWA-Offline%20Ready-blueviolet?style=flat-square" alt="PWA Ready" />
   <img src="https://img.shields.io/badge/License-MIT-slate?style=flat-square" alt="License MIT" />
 </p>
 
@@ -27,14 +28,19 @@ PoseCraft is a client-side biomechanical movement analysis laboratory and repeti
 ## Key Capabilities
 
 - **28 Biomechanical Modules Across 6 Suites**: Calisthenics, Barbell & Hypertrophy, Unilateral & Lower Body, Conditioning, Athletic Power, and Kinetotherapy / Mobility.
-- **Velocity-Based Training (VBT) Engine**: Calculates Mean Concentric Velocity (m/s), Peak Velocity, and Velocity Loss % in real time. Classifies reps into 4 zones (Absolute Strength, Strength-Speed, Speed-Strength, and Speed & Power) with automated fatigue limit warnings.
+- **Interactive 3D Orbit Skeleton Viewport**: Projects 33 anatomical joints into 3D metric camera space using MediaPipe world landmarks. Supports mouse and touch drag rotation with Euler angles, wheel zoom, ground grid, coordinate gizmo, and anatomical camera presets (Frontal, Sagittal Left, Sagittal Right, Transverse Top).
+- **Dynamic Velocity Bar Path Heatmap & Mechanical Sticking Points**: Real-time trajectory ribbon color-coded by concentric velocity (cyan > 0.85 m/s, green > 0.60 m/s, amber > 0.38 m/s, red < 0.38 m/s). Automatically detects and flags the exact sticking point coordinates where propulsion slows below 0.40 m/s.
+- **Continuous Acoustic Biofeedback Sonification Engine**: Web Audio API FM synthesis graph that continuously modulates audio pitch (220 Hz to 660 Hz) based on concentric velocity. Triggers acoustic dissonance via a detuned tritone secondary oscillator when knee valgus collapse or lumbar flexion faults occur.
+- **Visual No-Code Kinematic Exercise Studio**: Create custom exercise rules with interactive joint selector presets (Knee, Elbow, Hip, Shoulder), dual-threshold angle sliders with hysteresis, and safety check toggles. Persists custom exercises to local storage with JSON schema export and import.
+- **Dual-View Side-by-Side Clinical Benchmark Comparison**: Split-screen interface comparing live repetitions against gold-standard clinical exercise models with synchronized phase scrubbing (0% to 100%), play/pause controls, and range of motion comparison tables.
+- **VBT RPE Estimator, Reps-in-Reserve (RIR), and Dynamic 1RM Predictor**: Applies González-Badillo and Sánchez-Medina velocity profiles to predict 1RM and real-time RPE/RIR from mean concentric velocity and user-entered barbell load.
+- **Bilingual Romanian and English Voice Commander**: Hands-free voice recognition with native command dictionaries for Romanian (ro-RO) and English (en-US), including commands for starting sets, pausing, resetting, reports, fullscreen, 3D orbit, and sonification.
+- **Progressive Web App (PWA) Offline Architecture**: Service worker caching MediaPipe WebAssembly runtimes and assets with a CacheFirst strategy for full offline usability.
+- **Standardized Garmin & Strava .TCX Exporter**: Generates schema-valid Training Center XML with per-repetition trackpoints, heart rate / cadence indicators, and estimated instantaneous power in watts.
 - **Whole-Body Center of Mass (CoM) Projection**: Uses Dempster segmental mass distribution models across all 33 anatomical landmarks. Renders an active CoM reticle, vertical ground line, and midfoot base of support stability index.
-- **Hands-Free Web Speech Voice Commander**: Local speech recognition for commands like "start set", "stop set", "reset", "report", "fullscreen", and "mute" without touching the device.
-- **Auto-Countdown Pre-Set Timer**: Configurable 5-second acoustic and visual timer that gives athletes time to position before tracking begins.
-- **Translucent Ghost Skeleton Overlay**: Displays an ideal kinematic trajectory benchmark over live video to guide movement path and depth.
 - **Athlete Experience Profiles**: Adjusts valgus sensitivity, bilateral asymmetry tolerance (5% to 15%), and minimum depth across 4 tiers: Rehab / PT, Beginner, Intermediate, and Elite.
 - **Multi-Exercise Routine & Circuit Builder**: Preset circuits with automated inter-set rest countdowns and station progression.
-- **Printable Clinical Evaluation PDF Report**: Formatted clinical assessment documentation with print-optimized styling, joint range of motion charts, and bilateral asymmetry analysis.
+- **Printable Clinical Evaluation PDF Report**: Formatted clinical assessment documentation with print-optimized styling, joint range of motion charts, bilateral asymmetry analysis, and .TCX export integration.
 - **Anatomical Scale Invariance**: Normalizes all linear metrics against the user's torso length and limb baselines. Measurements stay accurate across different camera distances.
 - **Dual-Threshold Repetition State Machine**: Uses hysteresis to prevent double counting from muscle tremor or pause points.
 - **Adaptive Kalman Jitter Filtering**: Smooths 33 anatomical landmark coordinates in real time while preserving high-speed concentric movement spikes.
@@ -137,6 +143,33 @@ $$\mathbf{r}_{\text{CoM}} = \sum_{k=1}^{N} \mu_k \cdot \mathbf{r}_k$$
 
 Where $\mu_{\text{trunk}} = 0.497$, $\mu_{\text{thighs}} = 0.200$, $\mu_{\text{shanks}} = 0.122$, $\mu_{\text{head}} = 0.081$, and limb segments comprise the remaining mass. Midfoot stability evaluates the horizontal offset between $\mathbf{r}_{\text{CoM}}$ and the midpoint of the heel-toe base of support.
 
+### 3D Metric World Landmark Projection (Euler Orbit)
+Projects MediaPipe metric 3D coordinates $(x, y, z)$ into screen coordinates $(u, v)$ via extrinsic rotation matrices $R_y(\alpha)$ (azimuth) and $R_x(\beta)$ (elevation) with perspective projection:
+
+$$\mathbf{p}' = R_x(\beta) R_y(\alpha) (\mathbf{p} - \mathbf{c})$$
+$$u = c_x + \frac{f \cdot x'}{d - z'}, \quad v = c_y - \frac{f \cdot y'}{d - z'}$$
+
+Where $\mathbf{c}$ is the anatomical centroid, $f$ is focal length, and $d$ is camera viewing distance.
+
+### Velocity-Based 1RM & RIR Estimation
+Applies the González-Badillo & Sánchez-Medina second-order polynomial model mapping mean concentric velocity ($\bar{v}$) to percent 1RM ($\%1\text{RM}$):
+
+$$\%1\text{RM} = -a \cdot \bar{v}^2 - b \cdot \bar{v} + c$$
+$$\text{Estimated 1RM} = \frac{\text{Load}_{\text{kg}}}{\%1\text{RM} / 100}$$
+
+Reps-in-Reserve (RIR) and Rating of Perceived Exertion (RPE) are derived from the delta between current concentric velocity $\bar{v}$ and the exercise minimal velocity threshold (MVT $\approx 0.30\text{ m/s}$):
+
+$$\text{RPE} = 10 - \text{RIR}, \quad \text{RIR} = \text{clamp}\left(\left\lfloor \frac{\bar{v} - \text{MVT}}{0.075} \right\rfloor, 0, 5\right)$$
+
+### FM Acoustic Sonification Graph
+Concentric velocity dynamically modulates the carrier frequency $f_{\text{carrier}}$ of a Web Audio FM synthesizer graph:
+
+$$f_{\text{carrier}}(t) = f_0 + (f_{\text{max}} - f_0) \cdot \text{clamp}\left(\frac{\bar{v}(t)}{v_{\text{threshold}}}, 0, 1\right)$$
+
+When form violation alerts trigger (lumbar rounding or knee valgus collapse), a secondary oscillator introduces acoustic dissonance at a diminished fifth interval (tritone, $\sqrt{2} \cdot f_{\text{carrier}}$):
+
+$$f_{\text{alert}} = f_{\text{carrier}} \cdot 2^{6/12} \approx 1.4142 \cdot f_{\text{carrier}}$$
+
 ## Getting Started
 
 ### Prerequisites
@@ -173,15 +206,28 @@ posecraft/
 │   ├── architecture.md          # Frame pipeline and component architecture
 │   ├── biomechanics-spec.md     # Formulas, angles, and clinical thresholds
 │   └── exercise-catalog.md      # Detailed breakdown of all 28 exercise modules
+├── public/
+│   ├── manifest.json            # PWA Web App Manifest
+│   └── sw.js                    # PWA Service Worker (CacheFirst Wasm/models)
 ├── src/
-│   ├── engine/                  # Core math, geometry, Kalman filter, and state machine
+│   ├── engine/                  # Core math, Kalman filter, 3D orbit, sonification, VBT, TCX
+│   │   ├── orbit3d.ts           # 3D Euler matrix rotation and perspective projection
+│   │   ├── sonification.ts      # Web Audio FM synthesis and acoustic dissonance
+│   │   ├── custom_exercise.ts   # No-code kinematic rule compiler and state machine
+│   │   ├── vbt.ts               # Velocity profiles, RPE/RIR, and 1RM prediction
+│   │   ├── voice_commander.ts   # Bilingual (EN/RO) Web Speech voice engine
+│   │   └── tcx_exporter.ts      # Garmin/Strava schema-valid TCX XML generator
 │   ├── exercises/               # 28 pluggable exercise modules across 6 suites
-│   ├── components/              # Canvas HUD, telemetry, camera selector, and export modals
-│   ├── hooks/                   # React hooks for pose pipeline and audio feedback
-│   ├── store/                   # Workout session and telemetry store
+│   ├── components/
+│   │   ├── canvas/              # Video HUD, Angle Protractor, Orbit3D HUD
+│   │   ├── studio/              # Custom Exercise Studio & Dual-View Benchmark
+│   │   ├── telemetry/           # Real-time metrics, VBT charts, RPE/1RM gauges
+│   │   └── export/              # Session report modal, Printable PDF, CSV, TCX
+│   ├── hooks/                   # React hooks for pose pipeline, audio feedback, and voice
+│   ├── store/                   # Workout session, telemetry, and 3D/audio state
 │   ├── App.tsx                  # Studio layout and dashboard
-│   └── main.tsx                 # React 19 entrypoint
-├── tests/                       # Unit tests for geometry, state machine, and exercise rules
+│   └── main.tsx                 # React 19 entrypoint and Service Worker registration
+├── tests/                       # Unit tests (78 tests across 6 suites)
 ├── package.json
 └── vite.config.ts
 ```

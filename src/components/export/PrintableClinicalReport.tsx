@@ -1,6 +1,7 @@
 import React from 'react';
 import { RepetitionEvent, SafetyAlert } from '../../engine/types';
-import { Activity, ShieldCheck, Printer, X, FileText } from 'lucide-react';
+import { Activity, ShieldCheck, Printer, X, FileText, FileCode } from 'lucide-react';
+import { downloadTcxFile } from '../../engine/tcx_exporter';
 
 interface PrintableClinicalReportProps {
   isOpen: boolean;
@@ -35,6 +36,20 @@ export const PrintableClinicalReport: React.FC<PrintableClinicalReportProps> = (
     window.print();
   };
 
+  const handleExportTcx = () => {
+    downloadTcxFile({
+      id: `clinical_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      exerciseId: exerciseName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+      exerciseName,
+      totalReps,
+      validReps,
+      averageRom,
+      averageFormScore,
+      reps,
+    });
+  };
+
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -54,6 +69,14 @@ export const PrintableClinicalReport: React.FC<PrintableClinicalReportProps> = (
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportTcx}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 font-medium text-xs border border-slate-700 transition-all"
+              title="Export Strava & Garmin Training Center XML"
+            >
+              <FileCode className="w-3.5 h-3.5" />
+              <span>Garmin .TCX</span>
+            </button>
             <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md transition-all"

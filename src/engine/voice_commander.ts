@@ -1,7 +1,7 @@
 /**
  * Hands-Free Voice Commander for PoseCraft.
- * Uses the Web Speech Recognition API for on-device, hands-free voice control.
- * Supports commands: "start set", "stop set", "reset", "next", "previous", "report", "fullscreen", "mute".
+ * Uses the Web Speech Recognition API with bilingual English (en-US) and Romanian (ro-RO) support.
+ * Supports commands: "start set", "stop set", "reset", "next", "previous", "report", "fullscreen", "mute", "orbit 3d", "sonification".
  */
 
 export type VoiceCommandAction =
@@ -14,7 +14,9 @@ export type VoiceCommandAction =
   | 'toggle_fullscreen'
   | 'toggle_mute'
   | 'start_recording'
-  | 'stop_recording';
+  | 'stop_recording'
+  | 'toggle_orbit3d'
+  | 'toggle_sonification';
 
 export interface RecognizedCommand {
   action: VoiceCommandAction;
@@ -23,10 +25,13 @@ export interface RecognizedCommand {
   timestamp: number;
 }
 
+export type VoiceLanguage = 'en-US' | 'ro-RO';
+
 export class VoiceCommander {
   private recognition: any = null;
   private isListening: boolean = false;
   private isSupported: boolean = false;
+  private currentLanguage: VoiceLanguage = 'en-US';
   private onCommandCallback: ((cmd: RecognizedCommand) => void) | null = null;
   private onStatusChangeCallback: ((listening: boolean) => void) | null = null;
   private restartTimeout: any = null;
@@ -41,7 +46,7 @@ export class VoiceCommander {
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
         this.recognition.interimResults = false;
-        this.recognition.lang = 'en-US';
+        this.recognition.lang = this.currentLanguage;
 
         this.recognition.onresult = (event: any) => {
           const lastResult = event.results[event.results.length - 1];
@@ -53,14 +58,12 @@ export class VoiceCommander {
         };
 
         this.recognition.onerror = (e: any) => {
-          // If network or not-allowed, stop listening
           if (e.error === 'not-allowed') {
             this.stop();
           }
         };
 
         this.recognition.onend = () => {
-          // Auto restart if still marked as listening
           if (this.isListening) {
             clearTimeout(this.restartTimeout);
             this.restartTimeout = setTimeout(() => {
@@ -84,6 +87,21 @@ export class VoiceCommander {
     return this.isListening;
   }
 
+  public getLanguage(): VoiceLanguage {
+    return this.currentLanguage;
+  }
+
+  public setLanguage(lang: VoiceLanguage) {
+    this.currentLanguage = lang;
+    if (this.recognition) {
+      this.recognition.lang = lang;
+      if (this.isListening) {
+        // Restart with new language
+        this.recognition.stop();
+      }
+    }
+  }
+
   public setOnCommand(cb: (cmd: RecognizedCommand) => void) {
     this.onCommandCallback = cb;
   }
@@ -96,7 +114,10 @@ export class VoiceCommander {
     if (!this.isSupported || this.isListening) return;
     try {
       this.isListening = true;
-      this.recognition.start();
+      if (this.recognition) {
+        this.recognition.lang = this.currentLanguage;
+        this.recognition.start();
+      }
       this.onStatusChangeCallback?.(true);
     } catch {
       this.isListening = false;
@@ -109,7 +130,7 @@ export class VoiceCommander {
     this.isListening = false;
     clearTimeout(this.restartTimeout);
     try {
-      this.recognition.stop();
+      this.recognition?.stop();
     } catch {
       // Ignored
     }
@@ -128,24 +149,118 @@ export class VoiceCommander {
 
   public processTranscript(transcript: string, confidence: number) {
     let action: VoiceCommandAction | null = null;
+    const t = transcript.toLowerCase();
 
-    if (transcript.includes('start') || transcript.includes('begin') || transcript.includes('go')) {
+    // 1. Start set (English + Romanian)
+    if (
+      t.includes('start') ||
+      t.includes('begin') ||
+      t.includes('go') ||
+      t.includes('porneste') ||
+      t.includes('pornește') ||
+      t.includes('incepe') ||
+      t.includes('începe')
+    ) {
       action = 'start_set';
-    } else if (transcript.includes('stop') || transcript.includes('pause') || transcript.includes('finish')) {
+    }
+    // 2. Stop set
+    else if (
+      t.includes('stop') ||
+      t.includes('pause') ||
+      t.includes('finish') ||
+      t.includes('opreste') ||
+      t.includes('oprește') ||
+      t.includes('pauza') ||
+      t.includes('pauză')
+    ) {
       action = 'stop_set';
-    } else if (transcript.includes('reset') || transcript.includes('clear')) {
+    }
+    // 3. Reset
+    else if (
+      t.includes('reset') ||
+      t.includes('clear') ||
+      t.includes('sterge') ||
+      t.includes('șterge') ||
+      t.includes('resetare')
+    ) {
       action = 'reset_workout';
-    } else if (transcript.includes('next') || transcript.includes('forward')) {
+    }
+    // 4. Next exercise
+    else if (
+      t.includes('next') ||
+      t.includes('forward') ||
+      t.includes('urmatorul') ||
+      t.includes('următorul') ||
+      t.includes('inainte') ||
+      t.includes('înainte')
+    ) {
       action = 'next_exercise';
-    } else if (transcript.includes('back') || transcript.includes('previous')) {
+    }
+    // 5. Previous exercise
+    else if (
+      t.includes('back') ||
+      t.includes('previous') ||
+      t.includes('anterior') ||
+      t.includes('inapoi') ||
+      t.includes('înapoi')
+    ) {
       action = 'prev_exercise';
-    } else if (transcript.includes('report') || transcript.includes('summary') || transcript.includes('stats')) {
+    }
+    // 6. Open report
+    else if (
+      t.includes('report') ||
+      t.includes('summary') ||
+      t.includes('stats') ||
+      t.includes('raport') ||
+      t.includes('rezumat') ||
+      t.includes('statistici')
+    ) {
       action = 'open_report';
-    } else if (transcript.includes('fullscreen') || transcript.includes('full screen')) {
+    }
+    // 7. Toggle fullscreen
+    else if (
+      t.includes('fullscreen') ||
+      t.includes('full screen') ||
+      t.includes('ecran complet') ||
+      t.includes('ecran')
+    ) {
       action = 'toggle_fullscreen';
-    } else if (transcript.includes('mute') || transcript.includes('unmute') || transcript.includes('sound')) {
+    }
+    // 8. Toggle 3D Orbit
+    else if (
+      t.includes('orbit') ||
+      t.includes('3d') ||
+      t.includes('schelet') ||
+      t.includes('model')
+    ) {
+      action = 'toggle_orbit3d';
+    }
+    // 9. Toggle Sonification
+    else if (
+      t.includes('sonificare') ||
+      t.includes('pitch') ||
+      t.includes('biofeedback')
+    ) {
+      action = 'toggle_sonification';
+    }
+    // 10. Toggle mute
+    else if (
+      t.includes('mute') ||
+      t.includes('unmute') ||
+      t.includes('sunet') ||
+      t.includes('mut')
+    ) {
       action = 'toggle_mute';
-    } else if (transcript.includes('record') || transcript.includes('video')) {
+    }
+    // 11. Start recording
+    else if (
+      t.includes('record') ||
+      t.includes('video') ||
+      t.includes('inregistrare') ||
+      t.includes('înregistrare') ||
+      t.includes('filmeaza') ||
+      t.includes('filmează')
+    ) {
       action = 'start_recording';
     }
 
