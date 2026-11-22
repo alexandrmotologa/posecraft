@@ -10,6 +10,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/alexandrmotologa/posecraft/actions/workflows/ci.yml"><img src="https://github.com/alexandrmotologa/posecraft/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/alexandrmotologa/posecraft/releases"><img src="https://img.shields.io/badge/version-v1.0.0-6366f1.svg?style=flat-square" alt="Version" /></a>
   <img src="https://img.shields.io/badge/Runtime-WebGPU%20%2F%20Wasm-00f5ff?style=flat-square" alt="WebGPU Runtime" />
   <img src="https://img.shields.io/badge/Pose%20Model-MediaPipe%2033%20Joints-0284c7?style=flat-square" alt="MediaPipe" />
   <img src="https://img.shields.io/badge/Frontend-React%2019%20%2B%20TypeScript-3b82f6?style=flat-square" alt="React 19" />
